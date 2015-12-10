@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
-import android.provider.ContactsContract;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -126,6 +125,24 @@ public class StorageCoordinator extends BroadcastReceiver {
 					TBBService.ACTION_POWER_DISCONNECTED)) {
 				isCharging = false;
 
+			}
+			else if (intent.getAction().equals(AssistivePlay.ACTION_APP_RESUME)) {
+				String packageName = intent.getStringExtra("packageName");
+				long timeStamp = intent.getLongExtra("timestamp", -1);
+
+				Log.d("BROADCAST RECEIVED", "APP_RESUME: package name:"+packageName+" timestamp:"+timeStamp);
+				//write into messagelogger
+				MessageLogger.sharedInstance().writeAsync("\"APP_RESUME\",\"packageName\":\"" + packageName + "\",\"timestamp\":\"" + timeStamp+"\"");
+				MessageLogger.sharedInstance().onFlush();
+			}
+			else if (intent.getAction().equals(AssistivePlay.ACTION_APP_PAUSE)) {
+				String packageName = intent.getStringExtra("packageName");
+				long timeStamp = intent.getLongExtra("timestamp", -1);
+
+				Log.d("BROADCAST RECEIVED","APP_PAUSE: package name:"+packageName+" timestamp:"+timeStamp);
+				//write into messagelogger
+				MessageLogger.sharedInstance().writeAsync("\"APP_PAUSE\",\"packageName\":\"" + packageName + "\",\"timestamp\":\"" + timeStamp+"\"");
+				MessageLogger.sharedInstance().onFlush();
 			}
 		} catch (Exception e) {
 			Toast.makeText(CoreController.sharedInstance().getTBBService(),

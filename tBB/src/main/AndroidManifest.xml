@@ -73,6 +73,9 @@
                 <action android:name="BB.STORAGECOORDINATOR.ACTION.LOCATION_REQUEST" />
                 <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
                 <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
+
+                <action android:name="BB.ACTION.APP_RESUME" />
+                <action android:name="BB.ACTION.APP_PAUSE" />
             </intent-filter>
         </receiver>
     </application>

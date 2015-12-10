@@ -1,28 +1,27 @@
 package tbb.core;
 
-import java.util.ArrayList;
-
-import tbb.core.logger.IOTreeLogger;
-import tbb.core.logger.KeystrokeLogger;
-import tbb.core.logger.MessageLogger;
-import tbb.core.service.TBBService;
-import tbb.core.ioManager.Monitor;
-import tbb.interfaces.AccessibilityEventReceiver;
-import tbb.interfaces.IOEventReceiver; 
-import tbb.interfaces.NotificationReceiver;
-import tbb.touch.TouchRecognizer;
-
-
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Point;
- 
-import android.preference.PreferenceManager;   
+import android.preference.PreferenceManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
+
+import java.util.ArrayList;
+
+import tbb.core.ioManager.Monitor;
+import tbb.core.logger.AssistivePlay;
+import tbb.core.logger.IOTreeLogger;
+import tbb.core.logger.KeystrokeLogger;
+import tbb.core.logger.MessageLogger;
+import tbb.core.service.TBBService;
+import tbb.interfaces.AccessibilityEventReceiver;
+import tbb.interfaces.IOEventReceiver;
+import tbb.interfaces.NotificationReceiver;
+import tbb.touch.TouchRecognizer;
 
 public class CoreController {
 
@@ -107,12 +106,14 @@ public class CoreController {
 
         // Event Receivers
         mAccessibilityEventReceivers = new ArrayList<AccessibilityEventReceiver>();
-        IOTreeLogger ioTreeLogger = new IOTreeLogger("IO", "Tree", 250, 50,"Interaction");
-        ioTreeLogger.start(mTBBService.getApplicationContext());
-        registerAccessibilityEventReceiver(ioTreeLogger);
+		AssistivePlay aPlay = new AssistivePlay(mTBBService.getApplicationContext());
+		registerAccessibilityEventReceiver(aPlay);
+        //registerAccessibilityEventReceiver(ioTreeLogger);
 
         // IO receivers
         mIOEventReceivers = new ArrayList<IOEventReceiver>();
+		IOTreeLogger ioTreeLogger = new IOTreeLogger("IO", "Tree", 250, 50,"Interaction");
+		ioTreeLogger.start(mTBBService.getApplicationContext());
         registerIOEventReceiver(ioTreeLogger);
 
         // Logger receivers

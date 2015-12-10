@@ -1,14 +1,5 @@
 package tbb.core.service;
 
-import blackbox.external.logger.DataWriter;
-import blackbox.tinyblackbox.R;
-import tbb.core.CoreController;
-import tbb.core.ioManager.Monitor;
-import tbb.core.logger.KeystrokeLogger;
-import tbb.core.logger.MessageLogger;
-import tbb.touch.TPRNexusS;
-import tbb.touch.TPRTab2;
-
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.annotation.TargetApi;
@@ -17,13 +8,12 @@ import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
-
 import android.os.Build;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.view.accessibility.AccessibilityEventCompat;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
@@ -31,6 +21,15 @@ import android.widget.Toast;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
+
+import blackbox.external.logger.DataWriter;
+import blackbox.tinyblackbox.R;
+import tbb.core.CoreController;
+import tbb.core.ioManager.Monitor;
+import tbb.core.logger.KeystrokeLogger;
+import tbb.core.logger.MessageLogger;
+import tbb.touch.TPRNexusS;
+import tbb.touch.TPRTab2;
 
 /**
  * TinyBlackBoxService
@@ -60,6 +59,9 @@ public class TBBService extends AccessibilityService {
 	public final static String ACTION_SCREEN_OFF = "BB.ACTION.SCREEN_OFF";
 	public final static String ACTION_POWER_CONNECTED = "android.intent.action.ACTION_POWER_CONNECTED";
 	public final static String ACTION_POWER_DISCONNECTED = "android.intent.action.ACTION_POWER_DISCONNECTED";
+	public static final String ACTION_APP_RESUME = "BB.ACTION.APP_RESUME";
+	public static final String ACTION_APP_PAUSE = "BB.ACTION.APP_PAUSE";
+
 
 	// TODO description and remove dependency
 	private Monitor mMonitor;
@@ -116,10 +118,13 @@ public class TBBService extends AccessibilityService {
 			mSharedPref
 					.registerOnSharedPreferenceChangeListener(mSharedPrefsListener);
 
-			// listen for screen on/off actions 
+			// listen for screen on/off actions
+			/*
 			IntentFilter listenerFilter = new IntentFilter();
 			listenerFilter.addAction(Intent.ACTION_SCREEN_ON);
 			listenerFilter.addAction(Intent.ACTION_SCREEN_OFF);
+			listenerFilter.addAction(AssistivePlay.ACTION_APP_RESUME);
+			listenerFilter.addAction(AssistivePlay.ACTION_APP_PAUSE);
 
 			registerReceiver(mScreenReceiver = new BroadcastReceiver() {
 				@Override
@@ -138,11 +143,21 @@ public class TBBService extends AccessibilityService {
 							toBroadcastIntent.setAction(ACTION_SCREEN_ON);
 							sendBroadcast(toBroadcastIntent);
 
+						} else if (intent.getAction().equals(
+								AssistivePlay.ACTION_APP_PAUSE)) {
+							toBroadcastIntent.setAction(AssistivePlay.ACTION_APP_PAUSE);
+							sendBroadcast(toBroadcastIntent);
+
+						}else if (intent.getAction().equals(
+								AssistivePlay.ACTION_APP_RESUME)) {
+							toBroadcastIntent.setAction(AssistivePlay.ACTION_APP_RESUME);
+							sendBroadcast(toBroadcastIntent);
+
 						}
 					}
 				}
 			}, listenerFilter);
-
+	*/
 			// initializes all modules of TBB service
 			initializeModules();
 			createNotification();
@@ -200,7 +215,7 @@ public class TBBService extends AccessibilityService {
 	 * for screen events.
 	 */
 	private void stopService() {
-		unregisterReceiver(mScreenReceiver);
+		//unregisterReceiver(mScreenReceiver);
 		CoreController.sharedInstance().stopService();
 		Log.v("IMPORTANT", "Monitor has been stopped");
 		mMonitor.stop();
@@ -281,6 +296,7 @@ public class TBBService extends AccessibilityService {
 	 */
 	@Override
 	public void onAccessibilityEvent(AccessibilityEvent event) {
+		printEventType(event);
 		try {
 			// forwards all accessibility events
 			CoreController.sharedInstance().updateAccessibilityEventReceivers(
@@ -468,5 +484,84 @@ public class TBBService extends AccessibilityService {
 	private void destroyNotification(){
 		NotificationManager mNotificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
 		mNotificationManager.cancel(mID);
+	}
+
+	public void printEventType(AccessibilityEvent event){
+		String typeName = "";
+
+		switch(event.getEventType()) {
+			case AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED:
+				typeName = "TYPE_NOTIFICATION_STATE_CHANGED";
+				break;
+			case AccessibilityEvent.TYPE_VIEW_CLICKED:
+				typeName = "TYPE_VIEW_CLICKED";
+				break;
+			case AccessibilityEvent.TYPE_VIEW_FOCUSED:
+				typeName = "TYPE_VIEW_FOCUSED";
+				break;
+			case AccessibilityEvent.TYPE_VIEW_LONG_CLICKED:
+				typeName = "TYPE_VIEW_LONG_CLICKED";
+				break;
+			case AccessibilityEvent.TYPE_VIEW_SELECTED:
+				typeName = "TYPE_VIEW_SELECTED";
+				break;
+			case AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED:
+				typeName = "TYPE_VIEW_TEXT_CHANGED";
+				break;
+			case AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED:
+				typeName = "TYPE_WINDOW_STATE_CHANGED";
+				break;
+			case AccessibilityEventCompat.TYPE_ANNOUNCEMENT:
+				typeName = "TYPE_ANNOUNCEMENT";
+				break;
+			case AccessibilityEventCompat.TYPE_GESTURE_DETECTION_END:
+				typeName = "TYPE_GESTURE_DETECTION_END";
+				break;
+			case AccessibilityEventCompat.TYPE_GESTURE_DETECTION_START:
+				typeName = "TYPE_GESTURE_DETECTION_START";
+				break;
+			case AccessibilityEventCompat.TYPE_TOUCH_EXPLORATION_GESTURE_END:
+				typeName = "TYPE_TOUCH_EXPLORATION_GESTURE_END";
+				break;
+			case AccessibilityEventCompat.TYPE_TOUCH_EXPLORATION_GESTURE_START:
+				typeName = "TYPE_TOUCH_EXPLORATION_GESTURE_START";
+				break;
+			case AccessibilityEventCompat.TYPE_TOUCH_INTERACTION_END:
+				typeName = "TYPE_TOUCH_INTERACTION_END";
+				break;
+			case AccessibilityEventCompat.TYPE_TOUCH_INTERACTION_START:
+				typeName = "TYPE_TOUCH_INTERACTION_START";
+				break;
+			case AccessibilityEventCompat.TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED:
+				typeName = "TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED";
+				break;
+			case AccessibilityEventCompat.TYPE_VIEW_ACCESSIBILITY_FOCUSED:
+				typeName = "TYPE_VIEW_ACCESSIBILITY_FOCUSED";
+				break;
+			case AccessibilityEventCompat.TYPE_VIEW_HOVER_ENTER:
+				typeName = "TYPE_VIEW_HOVER_ENTER";
+				break;
+			case AccessibilityEventCompat.TYPE_VIEW_HOVER_EXIT:
+				typeName = "TYPE_VIEW_HOVER_EXIT";
+				break;
+			case AccessibilityEventCompat.TYPE_VIEW_SCROLLED:
+				typeName = "TYPE_VIEW_SCROLLED";
+				break;
+			case AccessibilityEventCompat.TYPE_VIEW_TEXT_SELECTION_CHANGED:
+				typeName = "TYPE_VIEW_TEXT_SELECTION_CHANGED";
+				break;
+			case AccessibilityEventCompat.TYPE_VIEW_TEXT_TRAVERSED_AT_MOVEMENT_GRANULARITY:
+				typeName = "TYPE_VIEW_TEXT_TRAVERSED_AT_MOVEMENT_GRANULARITY";
+				break;
+			case AccessibilityEventCompat.TYPE_WINDOW_CONTENT_CHANGED:
+				typeName = "TYPE_WINDOW_CONTENT_CHANGED";
+				break;
+			default:
+				typeName = "UNKNOWN_TYPE";
+		}
+
+
+		Log.d("EVENT TYPE ", typeName + " PACKAGE: " + event.getPackageName().toString());
+
 	}
 }
