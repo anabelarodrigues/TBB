@@ -12,6 +12,7 @@ import tbb.interfaces.AccessibilityEventReceiver;
 
 /**
  * Created by Anabela on 08/12/2015.
+ * detects enter/exit of game
  */
 public class AssistivePlay implements AccessibilityEventReceiver {
     public static final String ACTION_APP_RESUME = "BB.ACTION.APP_RESUME";
@@ -38,7 +39,7 @@ public class AssistivePlay implements AccessibilityEventReceiver {
         if((eventType== AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
                 || eventType== AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
 
-                && !packageName.equals("pt.ul.fc.di.lasige.assistivegaming.prototype1")){
+                && !packageName.equals("blackbox.tinyblackbox")){
             identifyEvent(event,eventType);
 
         }
@@ -76,6 +77,7 @@ public class AssistivePlay implements AccessibilityEventReceiver {
                             && !packageName.startsWith("com.google.")
                             && !packageName.equals("android")
                             && !packageName.equals("system")
+
                             && eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
 
 

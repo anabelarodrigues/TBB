@@ -1,7 +1,6 @@
 package tbb.core;
 
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.Point;
 import android.preference.PreferenceManager;
 import android.util.DisplayMetrics;
@@ -67,6 +66,8 @@ public class CoreController {
 	public double M_HEIGHT;
 
 	public boolean permission=true;
+
+	public boolean landscape;
 
     protected CoreController() {}
 
@@ -135,6 +136,8 @@ public class CoreController {
         display.getSize(size);
         M_WIDTH = size.x;
         M_HEIGHT = size.y;
+
+
     }
 	/***********************************
 	 * IO Commands and messages
@@ -185,7 +188,7 @@ public class CoreController {
 
         if(mIOEventReceivers == null) return;
         for(IOEventReceiver receiver: mIOEventReceivers){
-            receiver.onUpdateIOEvent(device, type, code, value,timestamp, sysTime);
+            receiver.onUpdateIOEvent(device, type, code, value, timestamp, sysTime);
         }
 	}
 
@@ -364,12 +367,16 @@ public class CoreController {
 //        mIOEventReceivers = null;
 //        mKeystrokeEventReceiver = null;
 
+
         if(mMonitor!=null)
             mMonitor.stop();
+
+
 	}
 
+
     public void startServiceNoBroadCast() {
-        Log.v(TBBService.TAG,"STARTING MONITOR TOUCH");
+        Log.v(TBBService.TAG, "STARTING MONITOR TOUCH");
         if(mMonitor!=null)
             mMonitor.monitorTouch(true);
     }
@@ -377,13 +384,13 @@ public class CoreController {
 	private void startService() {
         Log.d(TBBService.TAG, SUBTAG + "starting service");
 
-		// Broadcast init event
-		Intent intent = new Intent();
-		intent.setAction(ACTION_INIT);
-		mTBBService.sendBroadcast(intent);
+
+
         //mTBBService.registerReceiver(IOTreeLogger.sharedInstance(),IOTreeLogger.INTENT_FILTER);
         //CoreController.registerLogger(IOTreeLogger.sharedInstance(mTBBService.getApplicationContext()));
 	}
+
+
 
 	public void setScreenSize(int width, int height) {
 
@@ -474,4 +481,7 @@ public class CoreController {
 	}
 
 
+	public boolean getIOLogging(){
+		return mMonitor.getMonitorState();
+	}
 }

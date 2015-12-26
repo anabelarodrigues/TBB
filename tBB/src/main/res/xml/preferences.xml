@@ -8,7 +8,7 @@
     
         
          <ListPreference
-            android:defaultValue="null"
+            android:defaultValue="tab2"
             android:entries="@array/tprMode"
             android:entryValues="@array/tprValues"
             android:key="@string/BB.PREFERENCE.TOUCH_RECOGNIZER"
@@ -24,7 +24,7 @@
             android:summary="@string/log"
             android:title="@string/log1" />
         <CheckBoxPreference
-            android:defaultValue="false"
+            android:defaultValue="true"
             android:key="@string/BB.PREFERENCE.LOGIO"
             android:summary="@string/logIOTitle"
             android:dependency="@string/BB.PREFERENCE.LOGGING"

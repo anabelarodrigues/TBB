@@ -7,7 +7,6 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.util.Log;
 
-import java.io.File;
 import java.util.ArrayList;
 
 
@@ -26,7 +25,9 @@ public class Logger implements BaseLogger{
     protected String mFilename = "";
     protected String mSequence;
     protected String mName;
+    protected String mPackage="";
     protected ArrayList<String> mData = null;
+    protected long mTimestamp = 0;
 
     private Context mContext;
 
@@ -47,6 +48,7 @@ public class Logger implements BaseLogger{
     static {
         INTENT_FILTER = new IntentFilter();
         INTENT_FILTER.addAction(BaseLogger.ACTION_UPDATE);
+        INTENT_FILTER.addAction(BaseLogger.ACTION_IO_UPDATE);
         INTENT_FILTER.addAction(BaseLogger.ACTION_FLUSH);
         INTENT_FILTER.addAction(BaseLogger.ACTION_STOP);
         INTENT_FILTER.addAction(BaseLogger.ACTION_LOCATION);
@@ -71,9 +73,16 @@ public class Logger implements BaseLogger{
         flush();
     }
 
+
+
     public void onStorageUpdate(String path, String sequence){
         Log.v(BaseLogger.TAG, SUBTAG + "onStorageUpdate:"+path+" sequence:"+sequence);
         setFileInfo(path, sequence);
+    }
+
+    public void onStorageUpdate(String packageName){
+        Log.v(BaseLogger.TAG, SUBTAG + "onStorageUpdate:"+packageName);
+        setFileInfo(packageName);
     }
 
     public void onLocationReceived(String path, String sequence) {
@@ -89,19 +98,28 @@ public class Logger implements BaseLogger{
 
     private void setFileInfo(String path, String sequence){
         //Log.v(BaseLogger.TAG, SUBTAG + "SetFIleInfo: "+path);
-        mFolderName = path+"/"+mName;
+        mFolderName = path; //TBB/
         mSequence = sequence;
-        mFilename = mFolderName+"/"+mSequence+"_"+mName+".json";
+        //mFilename = mFolderName+"/"+mSequence+"_"+mName+".json";
     }
+    private void setFileInfo(String packageName){
+        mPackage = packageName;
+        mTimestamp=System.currentTimeMillis();
+
+    }
+
+
 
     private void flush(){
         //Log.v(BaseLogger.TAG, SUBTAG + "Flush - "+mData.size()+" file: "+mFilename);
         DataWriter w = new DataWriter(mFolderName, mFilename, true);
         synchronized (mLock) {
-            w.execute(mData.toArray(new String[mData.size()])); // data is passed to background thread
+            w.execute(mData.toArray(new String[mData.size()]));// data is passed to background thread
             mData = new ArrayList<String>(); // initialization
         }
-    } 
+    }
+
+
 
     public void writeAsync(String data){
         synchronized (mLock) {
@@ -112,6 +130,8 @@ public class Logger implements BaseLogger{
         if (mData.size() >= mFlushThreshold)
             flush();
     }
+
+
 
     /**
      * StorageReceiver is responsible for catching broad casted StorageCoordinator
@@ -131,8 +151,20 @@ public class Logger implements BaseLogger{
 
                 onStorageUpdate(path, sequence);
             }
+            else if(intent.getAction().equals(BaseLogger.ACTION_IO_UPDATE)){
+                Bundle extras = intent.getExtras();
+                String packageName = extras.getString(BaseLogger.EXTRAS_PACKAGE_NAME, "");
+
+                Log.d("DEBUG","IO UPDATE RECEIVED: " + packageName);
+                mTimestamp = System.currentTimeMillis();
+
+                onStorageUpdate(packageName);
+
+            }
             else if(intent.getAction().equals(BaseLogger.ACTION_FLUSH)){
                 onFlush();
+
+
             }
             else if(intent.getAction().equals(BaseLogger.ACTION_STOP)){
                 stop();

@@ -76,6 +76,10 @@
 
                 <action android:name="BB.ACTION.APP_RESUME" />
                 <action android:name="BB.ACTION.APP_PAUSE" />
+
+                <action android:name="BB.ACTION.ANALYSE_DATA" />
+
+                <action android:name="BB.ACTION.CONFIGURATION_CHANGED" />
             </intent-filter>
         </receiver>
     </application>

@@ -1,18 +1,15 @@
 package tbb.core.logger;
 
-import android.os.Handler;
 import android.util.Log;
-import android.view.accessibility.AccessibilityEvent;
-import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Toast;
 
+import java.io.File;
 import java.util.ArrayList;
 
 import blackbox.external.logger.DataWriter;
 import blackbox.external.logger.Logger;
 import tbb.core.CoreController;
 import tbb.core.service.TBBService;
-import tbb.interfaces.AccessibilityEventReceiver;
 import tbb.interfaces.IOEventReceiver;
 import tbb.touch.TouchEvent;
 import tbb.touch.TouchRecognizer;
@@ -20,8 +17,7 @@ import tbb.touch.TouchRecognizer;
 /**
  * Created by kylemontague on 11/11/2014.
  */
-public class IOTreeLogger extends Logger implements AccessibilityEventReceiver,
-        IOEventReceiver {
+public class IOTreeLogger extends Logger implements IOEventReceiver {
     private static final String SUBTAG = "IOTreeLogger: ";
     private static String mIOName;
     private static int mIOThreshold;
@@ -42,7 +38,6 @@ public class IOTreeLogger extends Logger implements AccessibilityEventReceiver,
     private String mIntFilename;
     private TouchRecognizer mTPR;
     private int mTouchDevice;
-    private long mTimestamp = 0;
     private long mLastUpdate = 0;
 
     public IOTreeLogger(String IOName, String treeName, int ioFlushThreshold,
@@ -84,13 +79,17 @@ public class IOTreeLogger extends Logger implements AccessibilityEventReceiver,
         }
     }
 
+
+
     @Override
-    public void onStorageUpdate(String path, String sequence) {
+    public void onStorageUpdate(String packageName) {
         try {
-            super.onStorageUpdate(path, sequence);
+            super.onStorageUpdate(packageName);
             // Log.v(TBBService.TAG, SUBTAG + "onStorageUpdate");
-            setIOFileInfo(path, sequence);
-            setInteractionFileInfo(path, sequence);
+
+            setIOFileInfo();
+
+            //setInteractionFileInfo(path, sequence);
         } catch (Exception e) {
             Toast.makeText(CoreController.sharedInstance().getTBBService(),
                     "TBB Exception", Toast.LENGTH_LONG).show();
@@ -101,10 +100,10 @@ public class IOTreeLogger extends Logger implements AccessibilityEventReceiver,
     @Override
     public void onFlush() {
         try {
-            super.onFlush();
+            //super.onFlush();
             // Log.v(TBBService.TAG, SUBTAG + "onFlush");
             flushIO();
-            flushInteraction();
+            //flushInteraction();
         } catch (Exception e) {
             Toast.makeText(CoreController.sharedInstance().getTBBService(),
                     "TBB Exception", Toast.LENGTH_LONG).show();
@@ -113,18 +112,31 @@ public class IOTreeLogger extends Logger implements AccessibilityEventReceiver,
     }
 
     private void flushIO() {
-        // Log.v(TBBService.TAG, SUBTAG +
-        // "FlushIO - "+mIOData.size()+" file: "+mIOFilename);
+         Log.v(TBBService.TAG, SUBTAG +
+         "FlushIO - "+mIOData.size()+" file: "+mIOFilename);
         //synchronized (mIOLock) {
+
             DataWriter w = new DataWriter(mFolderName, mIOFilename, true);
             w.execute(mIOData.toArray(new String[mIOData.size()]));
             mIOData = new ArrayList<String>();
         //}
     }
 
-    private void setIOFileInfo(String path, String sequence) {
+    private void setIOFileInfo() {
         // Log.v(TBBService.TAG, SUBTAG + "SetIOFileInfo: "+path);
-        mIOFilename = mFolderName + "/" + mSequence + "_" + mIOName + ".json";
+        //this way we can search both by session and datetime
+
+
+
+
+        File folder =  new File(mFolderName + "/IOLogging/" +mPackage);
+        if(!folder.exists()) {
+            folder.mkdirs();
+
+        }
+
+        mIOFilename = mFolderName + "/IOLogging/" +mPackage+ "/"+ mSequence + "_" + mTimestamp + ".json";
+        Log.d("DEBUG","io filename"+mIOFilename);
     }
 
     private void setInteractionFileInfo(String path, String sequence) {
@@ -147,7 +159,7 @@ public class IOTreeLogger extends Logger implements AccessibilityEventReceiver,
     /**
      * LOGGER RECEIVERS
      */
-
+/*
     @Override
     public void onUpdateAccessibilityEvent(AccessibilityEvent event) {
 
@@ -267,18 +279,18 @@ public class IOTreeLogger extends Logger implements AccessibilityEventReceiver,
             flushInteraction();
 
     }
-
+*/
     private void flushInteraction() {
 
         Log.v(TBBService.TAG, SUBTAG +
                 "FlushIO - " + mIntData.size() + " file: " + mIntFilename);
        // synchronized (mIntLock) {
-            DataWriter w = new DataWriter(mFolderName, mIntFilename, true);
+            DataWriter w = new DataWriter(mFolderName, mIntFilename, true,CoreController.sharedInstance().getTBBService().getApplicationContext());
             w.execute(mIntData.toArray(new String[mIntData.size()]));
             mIntData = new ArrayList<String>();
        // }
     }
-
+/*
     @Override
     public int[] getType() {
         int[] type = new int[5];
@@ -289,7 +301,7 @@ public class IOTreeLogger extends Logger implements AccessibilityEventReceiver,
         type[4] = AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED;
         return type;
     }
-
+*/
     @Override
     public void onUpdateIOEvent(int device, int type, int code, int value,
                                 int timestamp, long sysTime) {
@@ -300,7 +312,7 @@ public class IOTreeLogger extends Logger implements AccessibilityEventReceiver,
                     .identifyOnChange(type, code, value, timestamp)) != -1) {
 
                 TouchEvent te = mTPR.getlastTouch();
-                mTimestamp = timestamp;
+              //  mTimestamp = timestamp;
                 String json = "{\"treeID\":" + id +
                         " , \"dev\":" + device +
                         " , \"type\":" + touchType +

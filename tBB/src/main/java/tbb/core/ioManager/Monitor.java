@@ -1,16 +1,14 @@
 package tbb.core.ioManager;
 
-import java.util.ArrayList;
-
-import tbb.core.CoreController;
-import tbb.core.service.TBBService;
-import tbb.core.ioManager.Events.InputDevice;
-
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
+
+import java.util.ArrayList;
+
+import tbb.core.CoreController;
+import tbb.core.ioManager.Events.InputDevice;
+import tbb.core.service.TBBService;
 
 
 public class Monitor {
@@ -25,15 +23,14 @@ public class Monitor {
 	boolean monitoring[];
 	private boolean virtualDriveEnable = false; 
 	private boolean rooted = false;
-	private boolean ioLogging = false;
 	/**
 	 * Initialises list of devices
 	 *
 	 * @param touchIndex
 	 * returns null if it wasnt able to open the devices (probably meaning te device is not rooted)
-	 * @param ioLogging
+	 *
 	 */
-	public Monitor(int touchIndex, boolean ioLogging) {
+	public Monitor(int touchIndex) {
 		this.touchIndex = touchIndex;
 		Events ev = new Events();
 		dev = ev.Init();
@@ -42,7 +39,15 @@ public class Monitor {
 			rooted=true;
 			monitoring = new boolean[dev.size()];
 		}
-		this.ioLogging=ioLogging;
+		//this.ioLogging=ioLogging;
+	}
+
+	public boolean getMonitorState(){
+		boolean state = false;
+		if (touchIndex != -1 && monitoring != null && monitoring.length>0) {
+			state = monitoring[touchIndex];
+		}
+		return state;
 	}
 
 	/**
@@ -219,7 +224,7 @@ public class Monitor {
 	 */
 	public int monitorTouch(boolean state) {
 		//if the device is not rooted ignores the request for monitoring
-		if(!rooted || !ioLogging)
+		if(!rooted)
 			return -1;
 		if (touchIndex != -1) {
 			monitorDevice(touchIndex, state);

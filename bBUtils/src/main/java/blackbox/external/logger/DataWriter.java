@@ -1,5 +1,7 @@
 package blackbox.external.logger;
 
+import android.content.Context;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -8,8 +10,6 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.reflect.Array;
-import java.util.ArrayList;
 
 /**
  * Created by hugonicolau on 13/11/2014.
@@ -20,6 +20,7 @@ import java.util.ArrayList;
 public class DataWriter extends AsyncTask<String, Void, String> {
 
 	private final static String SUBTAG = "DataWriter: ";
+	public static final String ACTION_ANALYSE_DATA = "BB.ACTION.ANALYSE_DATA";
 
 	private String mFilePath;
 	private String mFolderPath;
@@ -28,6 +29,7 @@ public class DataWriter extends AsyncTask<String, Void, String> {
 	private final String mJsonHeader="{\"records\":[";
 	private final String mJsonEnd="{}]}";
 	private boolean headers=true;
+	private Context loggerContext=null;
 
 	public DataWriter(String folderPath, String filePath, boolean toAppend) {
 		mFilePath = filePath;
@@ -51,6 +53,14 @@ public class DataWriter extends AsyncTask<String, Void, String> {
 		this.headers=headers;
 	}
 
+	public DataWriter(String folderPath, String filePath, boolean toAppend, Context context) {
+		mFilePath = filePath;
+		mFolderPath = folderPath;
+		rename = null;
+		this.toAppend = toAppend;
+		loggerContext = context;
+	}
+
 	@Override
 	protected String doInBackground(String... data) {
 
@@ -70,9 +80,16 @@ public class DataWriter extends AsyncTask<String, Void, String> {
 			file.renameTo(rename);
 			Log.v(BaseLogger.TAG, SUBTAG + "Successfully renamed");
 		}
+		if(loggerContext!=null){
+			Intent toBroadcastIntent = new Intent();
+			toBroadcastIntent.setAction(ACTION_ANALYSE_DATA);
+			loggerContext.sendBroadcast(toBroadcastIntent);
+		}
+
 	}
 
 	private void writeFile(String[] data, boolean toAppend) {
+
 		if (mFolderPath != null && !mFolderPath.isEmpty() && mFilePath!=null) {
 			// creates folder
 			File folder = new File(mFolderPath);
@@ -94,8 +111,8 @@ public class DataWriter extends AsyncTask<String, Void, String> {
 			try {
 				fw = new FileWriter(file, toAppend);
 				if(headers)
-					fw.write(mJsonHeader);
-				Log.v(BaseLogger.TAG, SUBTAG + mJsonHeader);
+					fw.write(header);
+				Log.v(BaseLogger.TAG, SUBTAG + header);
 
 				for (String line : data) {
 					Log.v(BaseLogger.TAG, SUBTAG + line);

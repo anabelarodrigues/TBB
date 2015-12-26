@@ -29,6 +29,7 @@ public class TBBPreferencesActivity extends PreferenceActivity {
 		addPreferencesFromResource(R.xml.preferences);
         MessageLogger.sharedInstance().requestStorageInfo(getApplicationContext());
 
+
         preferenceClickListener = new Preference.OnPreferenceClickListener() {
             @Override
             public boolean onPreferenceClick(Preference preference) {

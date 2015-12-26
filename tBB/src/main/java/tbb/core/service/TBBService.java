@@ -8,6 +8,7 @@ import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Environment;
@@ -56,9 +57,12 @@ public class TBBService extends AccessibilityService {
 
 	// service broadcast actions
 	public final static String ACTION_SCREEN_ON = "BB.ACTION.SCREEN_ON";
+	public final static String ACTION_CONFIGURATION_CHANGED = "BB.ACTION.CONFIGURATION_CHANGED";
+
 	public final static String ACTION_SCREEN_OFF = "BB.ACTION.SCREEN_OFF";
 	public final static String ACTION_POWER_CONNECTED = "android.intent.action.ACTION_POWER_CONNECTED";
 	public final static String ACTION_POWER_DISCONNECTED = "android.intent.action.ACTION_POWER_DISCONNECTED";
+
 	public static final String ACTION_APP_RESUME = "BB.ACTION.APP_RESUME";
 	public static final String ACTION_APP_PAUSE = "BB.ACTION.APP_PAUSE";
 
@@ -86,6 +90,8 @@ public class TBBService extends AccessibilityService {
 	public static final String ERROR_FILE = "err_log.txt";
 
 	public static boolean isRunning = false;
+
+
 
 	/**
 	 * Method called when the service is connected. It initializes the touch
@@ -119,12 +125,14 @@ public class TBBService extends AccessibilityService {
 					.registerOnSharedPreferenceChangeListener(mSharedPrefsListener);
 
 			// listen for screen on/off actions
-			/*
+
+
 			IntentFilter listenerFilter = new IntentFilter();
 			listenerFilter.addAction(Intent.ACTION_SCREEN_ON);
 			listenerFilter.addAction(Intent.ACTION_SCREEN_OFF);
-			listenerFilter.addAction(AssistivePlay.ACTION_APP_RESUME);
-			listenerFilter.addAction(AssistivePlay.ACTION_APP_PAUSE);
+            listenerFilter.addAction(Intent.ACTION_CONFIGURATION_CHANGED);
+		//	listenerFilter.addAction(AssistivePlay.ACTION_APP_RESUME);
+			//listenerFilter.addAction(AssistivePlay.ACTION_APP_PAUSE);
 
 			registerReceiver(mScreenReceiver = new BroadcastReceiver() {
 				@Override
@@ -144,20 +152,19 @@ public class TBBService extends AccessibilityService {
 							sendBroadcast(toBroadcastIntent);
 
 						} else if (intent.getAction().equals(
-								AssistivePlay.ACTION_APP_PAUSE)) {
-							toBroadcastIntent.setAction(AssistivePlay.ACTION_APP_PAUSE);
+								Intent.ACTION_CONFIGURATION_CHANGED)){
+							toBroadcastIntent.setAction(ACTION_CONFIGURATION_CHANGED);
 							sendBroadcast(toBroadcastIntent);
-
-						}else if (intent.getAction().equals(
-								AssistivePlay.ACTION_APP_RESUME)) {
-							toBroadcastIntent.setAction(AssistivePlay.ACTION_APP_RESUME);
-							sendBroadcast(toBroadcastIntent);
-
 						}
 					}
 				}
 			}, listenerFilter);
-	*/
+
+
+			// Broadcast init event
+			Intent intent = new Intent();
+			intent.setAction(CoreController.ACTION_INIT);
+			sendBroadcast(intent);
 			// initializes all modules of TBB service
 			initializeModules();
 			createNotification();
@@ -179,7 +186,7 @@ public class TBBService extends AccessibilityService {
 		MessageLogger.sharedInstance().requestStorageInfo(
 				getApplicationContext());
 		MessageLogger.sharedInstance().writeAsync(
-				"TBB Service tried to interrupt");
+				"\"TBB Service tried to interrupt\"");
 		MessageLogger.sharedInstance().onFlush();
 		/*
 		 * try { stopService(); } catch(Exception e){
@@ -195,9 +202,12 @@ public class TBBService extends AccessibilityService {
 	@Override
 	public void onDestroy() {
 		try {
+			Intent intent = new Intent();
+			intent.setAction(CoreController.ACTION_STOP);
+			sendBroadcast(intent);
 			MessageLogger.sharedInstance().requestStorageInfo(
 					getApplicationContext());
-			MessageLogger.sharedInstance().writeAsync("TBB Service destroyed");
+			MessageLogger.sharedInstance().writeAsync("\"TBB Service destroyed\"");
 			MessageLogger.sharedInstance().onFlush();
 			stopService();
 			destroyNotification();
@@ -215,7 +225,7 @@ public class TBBService extends AccessibilityService {
 	 * for screen events.
 	 */
 	private void stopService() {
-		//unregisterReceiver(mScreenReceiver);
+		unregisterReceiver(mScreenReceiver);
 		CoreController.sharedInstance().stopService();
 		Log.v("IMPORTANT", "Monitor has been stopped");
 		mMonitor.stop();
@@ -248,7 +258,7 @@ public class TBBService extends AccessibilityService {
 		// TODO remove dependency of Monitor by initializing it in
 		// CoreController
 		boolean ioLogging = mSharedPref.getBoolean(this.getString(R.string.BB_PREFERENCE_LOGIO), false);
-		mMonitor = new Monitor(-1,ioLogging);
+		mMonitor = new Monitor(-1);
 
 		// initialise coreController
 		CoreController.sharedInstance().initialize(mMonitor, this);
@@ -262,6 +272,7 @@ public class TBBService extends AccessibilityService {
 	 */
 	private boolean configureTouchRecogniser() {
 		String tpr = mSharedPref.getString(PREF_TOUCH_RECOGNIZER, "null");
+
 		if (tpr.equalsIgnoreCase("nexusS")) {
 			Log.v(TAG, SUBTAG + "nexus");
 			CoreController.sharedInstance().registerActivateTouch(
