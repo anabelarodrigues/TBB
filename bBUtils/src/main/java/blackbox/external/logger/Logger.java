@@ -26,7 +26,10 @@ public class Logger implements BaseLogger{
     protected String mFilename = "";
     protected String mSequence;
     protected String mName;
+    protected String mUser;
+    protected String mPackage="";
     protected ArrayList<String> mData = null;
+    protected long mTimestamp = 0;
 
     private Context mContext;
 
@@ -35,18 +38,20 @@ public class Logger implements BaseLogger{
     protected int mFlushThreshold = 1000;
     protected final int MIN_FLUSH_THRESHOLD = 50;
 
-    protected Logger(String name, int flushThreshold) {
+    protected Logger(String name, int flushThreshold,String user) {
 
         // initialize variables
         mName = name;
         mFlushThreshold = Math.max(MIN_FLUSH_THRESHOLD, flushThreshold);
         mData = new ArrayList<String>();
+        mUser = user;
     }
 
     public final static IntentFilter INTENT_FILTER;
     static {
         INTENT_FILTER = new IntentFilter();
         INTENT_FILTER.addAction(BaseLogger.ACTION_UPDATE);
+        INTENT_FILTER.addAction(BaseLogger.ACTION_IO_UPDATE);
         INTENT_FILTER.addAction(BaseLogger.ACTION_FLUSH);
         INTENT_FILTER.addAction(BaseLogger.ACTION_STOP);
         INTENT_FILTER.addAction(BaseLogger.ACTION_LOCATION);
@@ -56,14 +61,16 @@ public class Logger implements BaseLogger{
     public void start(Context context) {
         // configure broadcast receiver
         mContext = context;
+
         mStorageReceiver = new StorageReceiver();
         mContext.registerReceiver(mStorageReceiver,
                 Logger.INTENT_FILTER);
     }
 
+
     @Override
     public void stop() {
-    	
+
         if(mContext != null) {
             mContext.unregisterReceiver(mStorageReceiver);
             mContext = null;
@@ -71,9 +78,16 @@ public class Logger implements BaseLogger{
         flush();
     }
 
+
+
     public void onStorageUpdate(String path, String sequence){
         Log.v(BaseLogger.TAG, SUBTAG + "onStorageUpdate:"+path+" sequence:"+sequence);
         setFileInfo(path, sequence);
+    }
+
+    public void onStorageUpdate(String packageName){
+        Log.v(BaseLogger.TAG, SUBTAG + "onStorageUpdate:"+packageName);
+        setFileInfo(packageName);
     }
 
     public void onLocationReceived(String path, String sequence) {
@@ -88,20 +102,32 @@ public class Logger implements BaseLogger{
     }
 
     private void setFileInfo(String path, String sequence){
-        //Log.v(BaseLogger.TAG, SUBTAG + "SetFIleInfo: "+path);
-        mFolderName = path+"/"+mName;
+        mFolderName = path; //TBB/
+        File temp = new File(mFolderName);
+        if(!temp.exists()){
+            temp.mkdir();
+        }
         mSequence = sequence;
-        mFilename = mFolderName+"/"+mSequence+"_"+mName+".json";
+        //mFilename = mFolderName+"/"+mSequence+"_"+mName+".json";
     }
+    private void setFileInfo(String packageName){
+        mPackage = packageName;
+        mTimestamp=System.currentTimeMillis();
+
+    }
+
+
 
     private void flush(){
         //Log.v(BaseLogger.TAG, SUBTAG + "Flush - "+mData.size()+" file: "+mFilename);
         DataWriter w = new DataWriter(mFolderName, mFilename, true);
         synchronized (mLock) {
-            w.execute(mData.toArray(new String[mData.size()])); // data is passed to background thread
+            w.execute(mData.toArray(new String[mData.size()]));// data is passed to background thread
             mData = new ArrayList<String>(); // initialization
         }
-    } 
+    }
+
+
 
     public void writeAsync(String data){
         synchronized (mLock) {
@@ -112,6 +138,8 @@ public class Logger implements BaseLogger{
         if (mData.size() >= mFlushThreshold)
             flush();
     }
+
+
 
     /**
      * StorageReceiver is responsible for catching broad casted StorageCoordinator
@@ -131,8 +159,24 @@ public class Logger implements BaseLogger{
 
                 onStorageUpdate(path, sequence);
             }
+            else if(intent.getAction().equals(BaseLogger.ACTION_IO_UPDATE)){
+                Bundle extras = intent.getExtras();
+                String packageName = extras.getString(BaseLogger.EXTRAS_PACKAGE_NAME, "");
+                long timeStamp = extras.getLong(BaseLogger.EXTRAS_TIMESTAMP,-1);
+
+                if(timeStamp>-1)
+                    mTimestamp = timeStamp;
+
+
+                Log.d("DEBUG","IO UPDATE RECEIVED: " + packageName);
+
+                onStorageUpdate(packageName);
+
+            }
             else if(intent.getAction().equals(BaseLogger.ACTION_FLUSH)){
                 onFlush();
+
+
             }
             else if(intent.getAction().equals(BaseLogger.ACTION_STOP)){
                 stop();

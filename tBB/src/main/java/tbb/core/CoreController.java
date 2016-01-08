@@ -48,7 +48,7 @@ public class CoreController {
 
 
     // message logger
-    private MessageLogger mMessageLogger = null;
+    private static MessageLogger mMessageLogger = null;
 
 
 	// context, a.k.a tbb service
@@ -67,6 +67,8 @@ public class CoreController {
 	public double M_HEIGHT;
 
 	public boolean permission=true;
+
+	public boolean landscape;
 
     protected CoreController() {}
 
@@ -89,16 +91,16 @@ public class CoreController {
 
 
 		// initialise receivers
-        initializeReceivers();
+        //initializeReceivers();
 
 		// get screen resolution
 		configureScreen();
 
         // announce service start
-        startService();
+		//startService();
 	}
 
-    private void initializeReceivers(){
+    private void initializeReceivers(String username){
 
         // Notification receivers
         // TODO are we using notifications?
@@ -112,20 +114,23 @@ public class CoreController {
 
         // IO receivers
         mIOEventReceivers = new ArrayList<IOEventReceiver>();
-		IOTreeLogger ioTreeLogger = new IOTreeLogger("IO", "Tree", 250, 50,"Interaction");
+		IOTreeLogger ioTreeLogger = new IOTreeLogger("IO", "Tree", username, 250, 50,"Interaction");
 		ioTreeLogger.start(mTBBService.getApplicationContext());
         registerIOEventReceiver(ioTreeLogger);
 
         // Logger receivers
         mKeystrokeEventReceiver = new ArrayList<KeystrokeLogger>();
-        KeystrokeLogger ks = new KeystrokeLogger("Keystrokes", 150);
+        KeystrokeLogger ks = new KeystrokeLogger("Keystrokes", 150,username);
         ks.start(mTBBService.getApplicationContext());
         registerKeystrokeEventReceiver(ks);
 
-        mMessageLogger = MessageLogger.sharedInstance();
+        mMessageLogger = MessageLogger.sharedInstance(username);
         mMessageLogger.start(mTBBService.getApplicationContext());
     }
 
+	public static MessageLogger getmMessageLogger(){
+		return mMessageLogger;
+	}
     private void configureScreen(){
         WindowManager wm = (WindowManager) mTBBService.getSystemService(Context.WINDOW_SERVICE);
         Display display = wm.getDefaultDisplay();
@@ -135,6 +140,8 @@ public class CoreController {
         display.getSize(size);
         M_WIDTH = size.x;
         M_HEIGHT = size.y;
+
+
     }
 	/***********************************
 	 * IO Commands and messages
@@ -185,7 +192,7 @@ public class CoreController {
 
         if(mIOEventReceivers == null) return;
         for(IOEventReceiver receiver: mIOEventReceivers){
-            receiver.onUpdateIOEvent(device, type, code, value,timestamp, sysTime);
+            receiver.onUpdateIOEvent(device, type, code, value, timestamp, sysTime);
         }
 	}
 
@@ -364,12 +371,16 @@ public class CoreController {
 //        mIOEventReceivers = null;
 //        mKeystrokeEventReceiver = null;
 
+
         if(mMonitor!=null)
             mMonitor.stop();
+
+
 	}
 
+
     public void startServiceNoBroadCast() {
-        Log.v(TBBService.TAG,"STARTING MONITOR TOUCH");
+        Log.v(TBBService.TAG, "STARTING MONITOR TOUCH");
         if(mMonitor!=null)
             mMonitor.monitorTouch(true);
     }
@@ -377,12 +388,40 @@ public class CoreController {
 	private void startService() {
         Log.d(TBBService.TAG, SUBTAG + "starting service");
 
-		// Broadcast init event
-		Intent intent = new Intent();
-		intent.setAction(ACTION_INIT);
-		mTBBService.sendBroadcast(intent);
+		sessionInit();
+
         //mTBBService.registerReceiver(IOTreeLogger.sharedInstance(),IOTreeLogger.INTENT_FILTER);
         //CoreController.registerLogger(IOTreeLogger.sharedInstance(mTBBService.getApplicationContext()));
+	}
+
+	private void sessionInit(){
+		//get screen density and dimensions
+		WindowManager window = (WindowManager) mTBBService.getSystemService(Context.WINDOW_SERVICE);
+
+		DisplayMetrics metrics = new DisplayMetrics();
+		window.getDefaultDisplay().getMetrics(metrics);
+		//log information about session
+		mMessageLogger.writeAsync("\"SESSION_INIT\",\"timestamp\":\"" + System.currentTimeMillis() + "\"," +
+				"\"screen_density\":\"" + metrics.density + "\",\"screen_density_dpi\":\"" + metrics.densityDpi + "\"," +
+				"\"screen_width\":\"" + metrics.widthPixels + "\",\"screen_height\":\"" + metrics.heightPixels + "\"," +
+				"\"orientation\":\"" + mTBBService.getResources().getConfiguration().orientation + "\"");
+		mMessageLogger.onFlush();
+
+
+	}
+
+	public void setAccount(String account){
+		// Broadcast init event
+		Intent intent = new Intent();
+		intent.setAction(CoreController.ACTION_INIT);
+		mTBBService.sendBroadcast(intent);
+
+		//remove @etc, initialize with username.
+		String result[] = account.split("@");
+		Log.d("debug","user using service: "+result[0]);
+		initializeReceivers(result[0]);
+		startService();
+//TODO look for mkdirs ..
 	}
 
 	public void setScreenSize(int width, int height) {
@@ -390,6 +429,11 @@ public class CoreController {
 		mTBBService.storeScreenSize(width, height);
 	}
 
+
+	public void analyseSession(){
+		//get file(s)
+		//iterate over them and create objects
+	}
 	/**
 	 * Returns to home
 	 * 
@@ -417,6 +461,7 @@ public class CoreController {
 	public int registerNotificationReceiver(NotificationReceiver nr) {
 		mNotificationReceivers.add(nr);
 		return mNotificationReceivers.size() - 1;
+
 	}
 
 	public int getNotificationReceiversSize() {
@@ -474,4 +519,7 @@ public class CoreController {
 	}
 
 
+	public boolean getIOLogging(){
+		return mMonitor.getMonitorState();
+	}
 }

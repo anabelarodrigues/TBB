@@ -12,9 +12,9 @@ import android.preference.PreferenceManager;
 import android.widget.Toast;
 
 import blackbox.tinyblackbox.R;
+import tbb.core.CoreController;
 import tbb.core.logger.CloudStorage;
 import tbb.core.logger.Encryption;
-import tbb.core.logger.MessageLogger;
 import tbb.core.service.configuration.AppPermissionListActivity;
 import tbb.core.service.configuration.DataPermissions;
 
@@ -27,7 +27,8 @@ public class TBBPreferencesActivity extends PreferenceActivity {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		addPreferencesFromResource(R.xml.preferences);
-        MessageLogger.sharedInstance().requestStorageInfo(getApplicationContext());
+        CoreController.getmMessageLogger().requestStorageInfo(getApplicationContext());
+
 
         preferenceClickListener = new Preference.OnPreferenceClickListener() {
             @Override
@@ -62,8 +63,8 @@ public class TBBPreferencesActivity extends PreferenceActivity {
                     boolean checked = Boolean.valueOf(o.toString());
                     String state = (checked)?"started":"ended";
                     String data = "{\"type\":\"study\",\"timestamp\":" + System.currentTimeMillis() + ",\"data\":{\"text\":\"researcher session\", \"state\":\""+state+"\"}}";
-                    MessageLogger.sharedInstance().writeAsync(data);
-                    MessageLogger.sharedInstance().onFlush();
+                    CoreController.getmMessageLogger().writeAsync(data);
+                    CoreController.getmMessageLogger().onFlush();
                     return true;
                 }
                     //adding to the shared preferences if the user wants or not to record IO
