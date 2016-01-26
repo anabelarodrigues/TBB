@@ -28,9 +28,9 @@ import blackbox.tinyblackbox.R;
 import tbb.core.CoreController;
 import tbb.core.ioManager.Monitor;
 import tbb.core.logger.KeystrokeLogger;
-import tbb.core.view.tbbAccountPicker;
-import tbb.touch.TPRNexusS;
-import tbb.touch.TPRTab2;
+import tbb.view.tbbAccountPicker;
+import tbb.touch.TPROldProtocol;
+import tbb.touch.TPR;
 
 /**
  * TinyBlackBoxService
@@ -50,6 +50,7 @@ public class TBBService extends AccessibilityService {
 	private PreferenceChangeListener mSharedPrefsListener = null; // preferences
 																	// listener
 	public final static String PREF_TOUCH_RECOGNIZER = "BB.PREFERENCE.TOUCH_RECOGNIZER";
+	public final static String PREF_STORAGE_METHOD = "BB.PREFERENCE.STORAGE_METHOD";
 	public final static String PREF_LOGGING = "BB.PREFERENCE.LOGGING";
 	public final static String PREF_WIDTH = "BB.PREFERENCE.WIDTH";
 	public final static String PREF_HEIGHT = "BB.PREFERENCE.HEIGHT";
@@ -187,12 +188,14 @@ public class TBBService extends AccessibilityService {
 	 */
 	@Override
 	public void onInterrupt() {
+		if(!CoreController.sharedInstance().checkIfDB()){
 
-		CoreController.getmMessageLogger().requestStorageInfo(
-				getApplicationContext());
-		CoreController.getmMessageLogger().writeAsync(
-				"\"TBB Service tried to interrupt\"");
-		CoreController.getmMessageLogger().onFlush();
+			CoreController.getmMessageLogger().requestStorageInfo(
+					getApplicationContext());
+			CoreController.getmMessageLogger().writeAsync(
+					"\"TBB Service tried to interrupt\"");
+			CoreController.getmMessageLogger().onFlush();
+		}
 		/*
 		 * try { stopService(); } catch(Exception e){
 		 * Toast.makeText(getApplicationContext(), "TBB Exception",
@@ -210,10 +213,13 @@ public class TBBService extends AccessibilityService {
 			Intent intent = new Intent();
 			intent.setAction(CoreController.ACTION_STOP);
 			sendBroadcast(intent);
-			CoreController.getmMessageLogger().requestStorageInfo(
-					getApplicationContext());
-			CoreController.getmMessageLogger().writeAsync("\"TBB Service destroyed\"");
-			CoreController.getmMessageLogger().onFlush();
+			if(!CoreController.sharedInstance().checkIfDB()){
+
+				CoreController.getmMessageLogger().requestStorageInfo(
+						getApplicationContext());
+				CoreController.getmMessageLogger().writeAsync("\"TBB Service destroyed\"");
+				CoreController.getmMessageLogger().onFlush();
+			}
 			stopService();
 			destroyNotification();
 		} catch (Exception e) {
@@ -251,22 +257,24 @@ public class TBBService extends AccessibilityService {
 	 * activity.
 	 */
 	private void initializeModules() {
-		// starts touch recogniser
-		// if it's unable to initialize then stops initialization process
-		// TODO hardcoded values for type of device
-		// TODO make a list of supported devices and match with
-		// android.os.Build.Model ...
-		if (!configureTouchRecogniser())
-			return;
 
-		// initialise monitor
-		// TODO remove dependency of Monitor by initializing it in
-		// CoreController
-		boolean ioLogging = mSharedPref.getBoolean(this.getString(R.string.BB_PREFERENCE_LOGIO), false);
-		mMonitor = new Monitor(-1);
+			// starts touch recogniser
+			// if it's unable to initialize then stops initialization process
+			// TODO hardcoded values for type of device
+			// TODO make a list of supported devices and match with
+			// android.os.Build.Model ...
+			if (!configureTouchRecogniser())
+				return;
 
-		// initialise coreController
-		CoreController.sharedInstance().initialize(mMonitor, this);
+			// initialise monitor
+			// TODO remove dependency of Monitor by initializing it in
+			// CoreController
+			boolean ioLogging = mSharedPref.getBoolean(this.getString(R.string.BB_PREFERENCE_LOGIO), false);
+			mMonitor = new Monitor(-1);
+
+			// initialise coreController
+			CoreController.sharedInstance().initialize(mMonitor, this);
+
 	}
 
 	/**
@@ -281,11 +289,11 @@ public class TBBService extends AccessibilityService {
 		if (tpr.equalsIgnoreCase("nexusS")) {
 			Log.v(TAG, SUBTAG + "nexus");
 			CoreController.sharedInstance().registerActivateTouch(
-					new TPRNexusS());
+					new TPROldProtocol());
 		} else if (tpr.equalsIgnoreCase("tab2")) {
 			Log.v(TAG, SUBTAG + "tab");
 			CoreController.sharedInstance()
-					.registerActivateTouch(new TPRTab2());
+					.registerActivateTouch(new TPR());
 		} else {
 			Log.v(TAG, SUBTAG + "null");
 			if (tpr.equals("null")) {
@@ -300,6 +308,29 @@ public class TBBService extends AccessibilityService {
 			}
 		}
 		return true;
+	}
+
+	/*
+	* Check db preferences
+	* */
+	public int checkStorageMethod() {
+		String storage = mSharedPref.getString(PREF_STORAGE_METHOD, "null");
+		int returnstorage = -1;
+		if (storage.equalsIgnoreCase("db")) {
+			Log.v(TAG, SUBTAG + "db");
+			returnstorage= 0;
+		} else if (storage.equalsIgnoreCase("json")) {
+			Log.v(TAG, SUBTAG + "json");
+			returnstorage= 1;
+		} else {
+			Log.v(TAG, SUBTAG + "null");
+			if (storage.equals("null")) {
+				Toast.makeText(this,
+						"Go to settings and select storage method",
+						Toast.LENGTH_LONG).show();
+			}
+		}
+		return returnstorage;
 	}
 
 	/**

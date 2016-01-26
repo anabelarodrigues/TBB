@@ -2,8 +2,7 @@ package tbb.touch;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-
-import android.content.BroadcastReceiver;
+import java.util.Map;
 
 public abstract class TouchRecognizer {
 	
@@ -50,7 +49,7 @@ public abstract class TouchRecognizer {
 		// Array to store all touch events
 		protected ArrayList<TouchEvent> touches = new ArrayList<TouchEvent>();
 
-		// number of fingers used
+		// number of fingers used - MULTITOUCH
 		protected int numberTouches = 0;
 		protected ArrayList<Integer> id_touches = new ArrayList<Integer>();
 		protected int idFingerUp;
@@ -151,5 +150,20 @@ public abstract class TouchRecognizer {
 
 			return null;
 		}
+
+	public boolean checkIfMultiTouch(int id){
+		boolean multitouch = false;
+
+		if(!ids.isEmpty()) {
+			for (Map.Entry<Integer, Integer> entry : ids.entrySet()) {
+				if (entry.getValue() != id) {
+					multitouch = true;
+				}
+			}
+		}
+
+
+		return multitouch;
+	}
 	
 }

@@ -27,11 +27,14 @@
     <string name="set_keyboard">Select the active keyboard</string>
     <string name="tpr">Touch recognizer</string>
     <string name="set_tpr">Select the proper Touch recognizer module</string>
+    <string name="storage">Storage Method</string>
+    <string name="set_storage">Select your preferred storage method</string>
     <string name="title_activity_run_macro">RunMacro</string>
 
 
    <!--PREFERENCE STRINGS-->
    <string name="BB.PREFERENCE.TOUCH_RECOGNIZER">BB.PREFERENCE.TOUCH_RECOGNIZER</string>
+    <string name="BB.PREFERENCE.STORAGE_METHOD">BB.PREFERENCE.STORAGE_METHOD</string>
    <string name="BB.PREFERENCE.LOGGING">BB.PREFERENCE.LOGGING</string>
    <string name="BB.PREFERENCE.FLAG_RESEARCHER_SESSION">BB.PREFERENCE.FLAG_RESEARCHER_SESSION</string>
    <string name="BB.PREFERENCE.FORCE_ENCRYPT">BB.PREFERENCE.FORCE_ENCRYPT</string>

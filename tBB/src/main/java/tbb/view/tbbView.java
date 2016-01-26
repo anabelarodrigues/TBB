@@ -1,4 +1,4 @@
-package tbb.core.view;
+package tbb.view;
 
 import android.app.Activity;
 import android.os.Bundle;

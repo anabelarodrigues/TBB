@@ -2,10 +2,7 @@ package tbb.core.logger;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.Configuration;
-import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.WindowManager;
 import android.widget.Toast;
 
 import java.io.File;
@@ -27,29 +24,31 @@ public class MessageLogger extends Logger {
     private String mMsgFilename="";
     private String mAdjust=null;
 
-    public static MessageLogger sharedInstance(String user){
+    public static MessageLogger sharedInstance(String user,boolean logDB){
         if(mSharedInstance == null)
-            mSharedInstance = new MessageLogger(user);
+            mSharedInstance = new MessageLogger(user,logDB);
         return mSharedInstance;
     }
 
 
-    protected MessageLogger(String user){
-        super(_Name,2,user);
+    protected MessageLogger(String user,boolean logDB){
+        super(_Name,2,user,logDB);
 
     }
 
     @Override
     public void onStorageUpdate(String path, String sequence) {
-        try {
-            super.onStorageUpdate(path, sequence);
-            // Log.v(TBBService.TAG, SUBTAG + "onStorageUpdate");
-            setMsgFileInfo();
-            //setInteractionFileInfo(path, sequence);
-        } catch (Exception e) {
-            Toast.makeText(CoreController.sharedInstance().getTBBService(),
-                    "TBB Exception", Toast.LENGTH_LONG).show();
-            TBBService.writeToErrorLog(e);
+        if(logDB) {
+            try {
+                super.onStorageUpdate(path, sequence);
+                // Log.v(TBBService.TAG, SUBTAG + "onStorageUpdate");
+                setMsgFileInfo();
+                //setInteractionFileInfo(path, sequence);
+            } catch (Exception e) {
+                Toast.makeText(CoreController.sharedInstance().getTBBService(),
+                        "TBB Exception", Toast.LENGTH_LONG).show();
+                TBBService.writeToErrorLog(e);
+            }
         }
     }
 
@@ -80,11 +79,11 @@ public class MessageLogger extends Logger {
 
         Log.d("DEBUG","message logger filename"+mMsgFilename);
 
-        sessionInit();
     }
 
     @Override
     public void writeAsync(String data){
+        //TODO if/else
         mData.add("{\"message\":" + data + "},");
         //Log.v(BaseLogger.TAG, SUBTAG + "mData size:"+mData.size());
         if(mData.size() >= mFlushThreshold)
@@ -95,6 +94,7 @@ public class MessageLogger extends Logger {
      * Make a request to TBB for the current sequence folder location.
      */
     public void requestStorageInfo(Context context){
+
         Intent i= new Intent();
         i.setAction(BaseLogger.ACTION_SEND_REQUEST);
         i.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
@@ -102,7 +102,7 @@ public class MessageLogger extends Logger {
         Log.v(BaseLogger.TAG, _Name+": Requested Storage Location");
     }
 
-
+/*
     private void sessionInit(){
         //get screen density and dimensions
         Log.d("debug","session init.");
@@ -120,14 +120,19 @@ public class MessageLogger extends Logger {
         DisplayMetrics metrics = new DisplayMetrics();
         window.getDefaultDisplay().getMetrics(metrics);
         //log information about session
-        this.writeAsync("\"SESSION_INIT\",\"timestamp\":\"" + System.currentTimeMillis() + "\"," +
-                "\"screen_density\":\"" + metrics.density + "\",\"screen_density_dpi\":\"" + metrics.densityDpi + "\"," +
-                "\"screen_width\":\"" + metrics.widthPixels + "\",\"screen_height\":\"" + metrics.heightPixels + "\"," +
-                "\"orientation\":\"" + orientation + "\"");
-        this.onFlush();
+
+        if(logDB) {
+            //TODO db things
+        } else {
+            this.writeAsync("\"SESSION_INIT\",\"timestamp\":\"" + System.currentTimeMillis() + "\"," +
+                    "\"screen_density\":\"" + metrics.density + "\",\"screen_density_dpi\":\"" + metrics.densityDpi + "\"," +
+                    "\"screen_width\":\"" + metrics.widthPixels + "\",\"screen_height\":\"" + metrics.heightPixels + "\"," +
+                    "\"orientation\":\"" + orientation + "\"");
+            this.onFlush();
+        }
 
 
 
     }
-
+*/
 }

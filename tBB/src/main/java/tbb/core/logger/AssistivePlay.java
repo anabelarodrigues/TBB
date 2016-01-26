@@ -38,7 +38,7 @@ public class AssistivePlay implements AccessibilityEventReceiver {
         String packageName = event.getPackageName().toString();
         int eventType=event.getEventType();
 
-        printEventType(event);
+        //printEventType(event);
 
         if((eventType== AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
                 || eventType== AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)

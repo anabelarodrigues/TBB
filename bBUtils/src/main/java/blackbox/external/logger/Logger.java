@@ -35,16 +35,20 @@ public class Logger implements BaseLogger{
 
     private BroadcastReceiver mStorageReceiver = null;
 
+    public boolean logDB;
+
     protected int mFlushThreshold = 1000;
     protected final int MIN_FLUSH_THRESHOLD = 50;
 
-    protected Logger(String name, int flushThreshold,String user) {
+    protected Logger(String name, int flushThreshold,String user, boolean logDB) {
 
         // initialize variables
         mName = name;
         mFlushThreshold = Math.max(MIN_FLUSH_THRESHOLD, flushThreshold);
         mData = new ArrayList<String>();
         mUser = user;
+
+        this.logDB = logDB;
     }
 
     public final static IntentFilter INTENT_FILTER;
@@ -81,26 +85,30 @@ public class Logger implements BaseLogger{
 
 
     public void onStorageUpdate(String path, String sequence){
-        Log.v(BaseLogger.TAG, SUBTAG + "onStorageUpdate:"+path+" sequence:"+sequence);
+        Log.v(BaseLogger.TAG, SUBTAG + "onStorageUpdate:" + path + " sequence:" + sequence);
         setFileInfo(path, sequence);
     }
 
     public void onStorageUpdate(String packageName){
-        Log.v(BaseLogger.TAG, SUBTAG + "onStorageUpdate:"+packageName);
-        setFileInfo(packageName);
+        Log.v(BaseLogger.TAG, SUBTAG + "onStorageUpdate:" + packageName);
+        mPackage = packageName;
+        mTimestamp=System.currentTimeMillis();
+
     }
 
     public void onLocationReceived(String path, String sequence) {
         Log.v(BaseLogger.TAG, SUBTAG + "onLocationReceived:" + path + " sequence:" + sequence);
-        if(mSequence!= sequence)
-            setFileInfo(path,sequence);
+        if(mSequence!= sequence && !logDB)
+            setFileInfo(path, sequence);
     }
 
     public void onFlush(){
         //Log.v(BaseLogger.TAG, SUBTAG + "onFlush");
-        flush();
+        if(!logDB)
+            flush();
     }
 
+    //only called if json
     private void setFileInfo(String path, String sequence){
         mFolderName = path; //TBB/
         File temp = new File(mFolderName);
@@ -110,11 +118,7 @@ public class Logger implements BaseLogger{
         mSequence = sequence;
         //mFilename = mFolderName+"/"+mSequence+"_"+mName+".json";
     }
-    private void setFileInfo(String packageName){
-        mPackage = packageName;
-        mTimestamp=System.currentTimeMillis();
 
-    }
 
 
 
@@ -150,7 +154,7 @@ public class Logger implements BaseLogger{
     public class StorageReceiver extends BroadcastReceiver {
 
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, Intent intent) { //use this to set logDB onChangePreferences as well !
 
             if(intent.getAction().equals(BaseLogger.ACTION_UPDATE)){
                 Bundle extras = intent.getExtras();
@@ -159,6 +163,7 @@ public class Logger implements BaseLogger{
 
                 onStorageUpdate(path, sequence);
             }
+
             else if(intent.getAction().equals(BaseLogger.ACTION_IO_UPDATE)){
                 Bundle extras = intent.getExtras();
                 String packageName = extras.getString(BaseLogger.EXTRAS_PACKAGE_NAME, "");

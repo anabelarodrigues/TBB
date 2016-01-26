@@ -10,8 +10,8 @@ public class KeystrokeLogger extends Logger implements KeystrokeEventReceiver {
     //threshold on text size of the log to prevent full documents being recorded at every keystroke.
     //TODO give the option to save the full text box always or never
     public final static int TEXT_SIZE_THRESHOLD=100;
-    public KeystrokeLogger(String name, int flushThreshold,String user){
-        super(name, flushThreshold,user);
+    public KeystrokeLogger(String name, int flushThreshold,String user,Boolean db){
+        super(name, flushThreshold,user,db);
     }
 
     /**

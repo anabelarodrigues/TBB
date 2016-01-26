@@ -27,7 +27,7 @@ public class TBBPreferencesActivity extends PreferenceActivity {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		addPreferencesFromResource(R.xml.preferences);
-        CoreController.getmMessageLogger().requestStorageInfo(getApplicationContext());
+       // CoreController.sharedInstance().getmMessageLogger().requestStorageInfo(getApplicationContext());
 
 
         preferenceClickListener = new Preference.OnPreferenceClickListener() {
@@ -62,9 +62,14 @@ public class TBBPreferencesActivity extends PreferenceActivity {
                 if(preference.getKey().equals(getString(R.string.BB_PREFERENCE_FLAG_RESEARCHER_SESSION))) {
                     boolean checked = Boolean.valueOf(o.toString());
                     String state = (checked)?"started":"ended";
-                    String data = "{\"type\":\"study\",\"timestamp\":" + System.currentTimeMillis() + ",\"data\":{\"text\":\"researcher session\", \"state\":\""+state+"\"}}";
-                    CoreController.getmMessageLogger().writeAsync(data);
-                    CoreController.getmMessageLogger().onFlush();
+                    if(CoreController.sharedInstance().checkIfDB()){
+                        //TODO db things; what even is this ..
+                        //send the below intent with the correct namings
+                    }else {
+                        String data = "{\"type\":\"study\",\"timestamp\":" + System.currentTimeMillis() + ",\"data\":{\"text\":\"researcher session\", \"state\":\"" + state + "\"}}";
+                        CoreController.getmMessageLogger().writeAsync(data);
+                        CoreController.getmMessageLogger().onFlush();
+                    }
                     return true;
                 }
                     //adding to the shared preferences if the user wants or not to record IO

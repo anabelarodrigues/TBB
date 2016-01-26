@@ -1,12 +1,8 @@
 package tbb.touch;
 
-import tbb.core.CoreController;
-
-
-
-import android.content.Context;
-import android.content.Intent;
 import android.util.Log;
+
+import java.util.Map;
 
 /**
  * Process touch event received, identify type of touch
@@ -17,9 +13,9 @@ import android.util.Log;
  * @author Andre Rodrigues
  * 
  */
-public class TPRTab2 extends TouchRecognizer {
+public class TPR extends TouchRecognizer {
 
-	private final String LT = "Tab2";
+	private final String LT = "TPR";
 	private int slot = 0;
 
 	/**
@@ -62,6 +58,7 @@ public class TPRTab2 extends TouchRecognizer {
 	@Override
 	public int identifyOnRelease(int type, int code, int value, int timestamp) {
 		// + timestamp);
+
 		if (code == ABS_MT_TRACKING_ID) {
 			identifier = value;
 		} else if (code == ABS_MT_PRESSURE)
@@ -97,6 +94,20 @@ public class TPRTab2 extends TouchRecognizer {
 		return -1;
 	}
 
+
+
+	private void printMaps(){
+		Log.d(LT,"PRINTING IDS");
+		for (Map.Entry<Integer, Integer> entry : ids.entrySet()) {
+			Log.d(LT, "key: " + entry.getKey() + " value: "+entry.getValue()); ;
+		}
+
+		Log.d(LT,"PRINTING tou");
+		for (Map.Entry<Integer, TouchEvent> entry : tou.entrySet()) {
+			Log.d(LT, "key: " + entry.getKey() + " value: "+entry.getValue().toString()); ;
+		}
+	}
+
 	/**
 	 * Register in array all touch positions until finger release
 	 * 
@@ -105,7 +116,7 @@ public class TPRTab2 extends TouchRecognizer {
 	 */
 	@Override
 	public int identifyOnChange(int type, int code, int value, int timestamp) {
-		//Log.d(LT, "t:" + type + " c:" + code + " v:" + value); // " time:"
+		Log.d(LT, "t:" + type + " c:" + code + " v:" + value); // " time:"
 
 		switch (code) {
 		case ABS_MT_POSITION_X:
@@ -125,7 +136,7 @@ public class TPRTab2 extends TouchRecognizer {
 			touchMinor = value;
 			break;
 		case ABS_MT_TRACKING_ID:
-			// Log.d(LT, "ID: " + value ); //" time:"
+			Log.d(LT, "ID: " + value); //" time:"
 			identifier = value;
 			if (identifier > 0) {
 
@@ -136,10 +147,12 @@ public class TPRTab2 extends TouchRecognizer {
 
 			break;
 		case ABS_MT_SLOT:
-			// Log.d(LT, "SLOT: " + value ); //" time:"
+			 Log.d(LT, "SLOT: " + value ); //" time:"
 			slot = value;
 			if (ids.containsKey(slot))
 				identifier = ids.get(slot);
+
+			printMaps();
 			break;
 		case SYN_REPORT:
 
@@ -170,7 +183,7 @@ public class TPRTab2 extends TouchRecognizer {
 
 		}
 
-		// Log.d(LT, "t:" + type + " c:" + code + " v:" + value);
+		Log.d(LT, "t:" + type + " c:" + code + " v:" + value);
 		return -1;
 	}
 

@@ -10,7 +10,7 @@ package tbb.touch;
  * @author Andre Rodrigues
  * 
  */
-public class TPRNexusS extends TouchRecognizer {
+public class TPROldProtocol extends TouchRecognizer {
 
 	private final String LT = "TouchRecS";
 	

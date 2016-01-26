@@ -1,6 +1,7 @@
-package tbb.core.view;
+package tbb.view;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -26,8 +27,10 @@ public class tbbDialog extends Activity {
         yes.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d("debug","yes onclick");
-
+                Log.d("debug", "yes onclick");
+                Intent intent = new Intent(getApplicationContext(),tbbEditor.class);
+                startActivity(intent);
+                finish();
             }
         });
 

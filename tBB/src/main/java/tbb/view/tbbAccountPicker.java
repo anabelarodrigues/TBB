@@ -1,4 +1,4 @@
-package tbb.core.view;
+package tbb.view;
 
 import android.accounts.AccountManager;
 import android.app.Activity;
@@ -43,7 +43,8 @@ public class tbbAccountPicker extends Activity {
                 }
             }
             if (resultCode == Activity.RESULT_CANCELED) {
-//close service; show error
+                //startActivityForResult(AccountPicker.newChooseAccountIntent(null, null, new String[]{"com.google"}, true, null, null, null, null), PICK_ACCOUNT_REQUEST);
+
             }
         }
         finish();

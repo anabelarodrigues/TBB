@@ -32,6 +32,17 @@
         <item name="3">tab2</item>
     </string-array>
 
+
+    <string-array name="storageMode">
+        <item name="1">Database</item>
+        <item name="2">JSON</item>
+
+    </string-array>
+    <string-array name="storageValues">
+        <item name="1">db</item>
+        <item name="2">json</item>
+    </string-array>
+
     <string-array name="encryptionLevelNames">
         <item>Everything</item>
         <item>Sensitive Data Only</item>

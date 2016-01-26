@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.Display;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
@@ -18,6 +19,7 @@ import tbb.core.logger.IOTreeLogger;
 import tbb.core.logger.KeystrokeLogger;
 import tbb.core.logger.MessageLogger;
 import tbb.core.service.TBBService;
+import tbb.database.TbbDatabaseHelper;
 import tbb.interfaces.AccessibilityEventReceiver;
 import tbb.interfaces.IOEventReceiver;
 import tbb.interfaces.NotificationReceiver;
@@ -54,6 +56,9 @@ public class CoreController {
 	// context, a.k.a tbb service
 	private TBBService mTBBService = null;
 
+	//database
+	private TbbDatabaseHelper tbbDBHelper;
+
 	// IO Variables
 	public static final int SET_BLOCK = 0;
 	public static final int MONITOR_DEV = 1;
@@ -69,6 +74,8 @@ public class CoreController {
 	public boolean permission=true;
 
 	public boolean landscape;
+
+    private int mUserID;
 
     protected CoreController() {}
 
@@ -112,19 +119,28 @@ public class CoreController {
 		registerAccessibilityEventReceiver(aPlay);
         //registerAccessibilityEventReceiver(ioTreeLogger);
 
+        boolean dbActive = false;
+        if(tbbDBHelper != null){
+            dbActive = true;
+        }
+
         // IO receivers
         mIOEventReceivers = new ArrayList<IOEventReceiver>();
-		IOTreeLogger ioTreeLogger = new IOTreeLogger("IO", "Tree", username, 250, 50,"Interaction");
+		IOTreeLogger ioTreeLogger = new IOTreeLogger("IO", "Tree", username, 250, 50,"Interaction",dbActive);
 		ioTreeLogger.start(mTBBService.getApplicationContext());
         registerIOEventReceiver(ioTreeLogger);
 
+
+
         // Logger receivers
         mKeystrokeEventReceiver = new ArrayList<KeystrokeLogger>();
-        KeystrokeLogger ks = new KeystrokeLogger("Keystrokes", 150,username);
+        KeystrokeLogger ks = new KeystrokeLogger("Keystrokes", 150,username,dbActive);
         ks.start(mTBBService.getApplicationContext());
         registerKeystrokeEventReceiver(ks);
 
-        mMessageLogger = MessageLogger.sharedInstance(username);
+
+        //why shared instance ?
+        mMessageLogger = MessageLogger.sharedInstance(username,dbActive);
         mMessageLogger.start(mTBBService.getApplicationContext());
     }
 
@@ -387,6 +403,9 @@ public class CoreController {
 
 	private void startService() {
         Log.d(TBBService.TAG, SUBTAG + "starting service");
+		//mTBBService.initializeService();
+		//if db is chosen
+
 
 		sessionInit();
 
@@ -394,18 +413,26 @@ public class CoreController {
         //CoreController.registerLogger(IOTreeLogger.sharedInstance(mTBBService.getApplicationContext()));
 	}
 
+
+
 	private void sessionInit(){
 		//get screen density and dimensions
 		WindowManager window = (WindowManager) mTBBService.getSystemService(Context.WINDOW_SERVICE);
 
+
 		DisplayMetrics metrics = new DisplayMetrics();
 		window.getDefaultDisplay().getMetrics(metrics);
 		//log information about session
-		mMessageLogger.writeAsync("\"SESSION_INIT\",\"timestamp\":\"" + System.currentTimeMillis() + "\"," +
-				"\"screen_density\":\"" + metrics.density + "\",\"screen_density_dpi\":\"" + metrics.densityDpi + "\"," +
-				"\"screen_width\":\"" + metrics.widthPixels + "\",\"screen_height\":\"" + metrics.heightPixels + "\"," +
-				"\"orientation\":\"" + mTBBService.getResources().getConfiguration().orientation + "\"");
-		mMessageLogger.onFlush();
+        if(mTBBService.checkStorageMethod() == 0){
+            startDBSession(System.currentTimeMillis(),metrics.density,metrics.densityDpi,metrics.widthPixels,
+                    metrics.heightPixels,mTBBService.getResources().getConfiguration().orientation);
+        } else {
+            mMessageLogger.writeAsync("\"SESSION_INIT\",\"timestamp\":\"" + System.currentTimeMillis() + "\"," +
+                    "\"screen_density\":\"" + metrics.density + "\",\"screen_density_dpi\":\"" + metrics.densityDpi + "\"," +
+                    "\"screen_width\":\"" + metrics.widthPixels + "\",\"screen_height\":\"" + metrics.heightPixels + "\"," +
+                    "\"orientation\":\"" + mTBBService.getResources().getConfiguration().orientation + "\"");
+            mMessageLogger.onFlush();
+        }
 
 
 	}
@@ -418,11 +445,32 @@ public class CoreController {
 
 		//remove @etc, initialize with username.
 		String result[] = account.split("@");
-		Log.d("debug","user using service: "+result[0]);
-		initializeReceivers(result[0]);
-		startService();
+		Log.d("TbbDatabaseHelper", "user using service: " + result[0]);
+
+			int userID = registerActiveStorage(result[0], account);
+			Log.d("TbbDatabaseHelper", "user id created or fetched:" + userID);
+			if (userID > 0) { //then db is being used
+				mUserID = userID;
+				initializeReceivers(result[0]);
+				startService();
+			}
+
+		if(tbbDBHelper == null){
+			initializeReceivers(result[0]);
+			startService();
+		}
+
+
+
+		//initialize receivers after database; check if dbhelper is null
+
+
 //TODO look for mkdirs ..
 	}
+
+	/*
+* Check db preferences
+* */
 
 	public void setScreenSize(int width, int height) {
 
@@ -493,6 +541,37 @@ public class CoreController {
 		mTouchRecognizer = touchRecognizer;
 	}
 
+	public int registerActiveStorage(String username,String email){
+		int storage = mTBBService.checkStorageMethod();
+		if(storage == 0){
+			//db
+			Log.d("debug","Initializing database...");
+			Toast.makeText(mTBBService.getApplicationContext(),"Initializing database ...",Toast.LENGTH_LONG);
+			tbbDBHelper = new TbbDatabaseHelper(mTBBService.getApplicationContext());
+            //user!
+            return tbbDBHelper.authenticateOrRegisterUser(username, email);
+		} else if (storage == 1){
+			//json
+			tbbDBHelper = null;
+		}
+        return -1;
+	}
+
+    public boolean checkIfDB(){
+        if(tbbDBHelper!=null)
+            return true;
+        return false;
+    }
+
+	//run this to save to db
+	/*
+	public boolean checkDBStorage(){
+		if(mTBBService.checkStorageMethod() == 0){
+			return true;
+		}
+		return false;
+	}
+*/
 	public TouchRecognizer getActiveTPR() {
 
         return mTouchRecognizer;
@@ -515,11 +594,43 @@ public class CoreController {
 
 	public int currentFileId() {
 		return PreferenceManager.getDefaultSharedPreferences(mTBBService).getInt(
-				"preFileSeq", 0);
+                "preFileSeq", 0);
 	}
 
 
 	public boolean getIOLogging(){
 		return mMonitor.getMonitorState();
 	}
+
+    /*DB CALLS*/
+    public void startDBSession(long timestamp, float density, int densityDpi, int width, int height, int orientation){
+        int id = tbbDBHelper.startSession(mUserID,timestamp,density,densityDpi,width,height,orientation);
+//necessary to return?
+    }
+
+    public void endSession(long timestamp){
+        tbbDBHelper.endSession(timestamp);
+    }
+
+    public void startPackageSession(String packageName, long timestamp){
+        //check if package exists
+        //get session id
+        tbbDBHelper.createNewPackageSession(packageName, timestamp);
+    }
+
+    public void endPackageSession(String packageName, long timestamp){
+        //check if package exists
+        //get session id
+        tbbDBHelper.endPackageSession(timestamp);
+    }
+
+    public void changeOrientation(long timestamp){
+        tbbDBHelper.changeOrientation(timestamp, mTBBService.getResources().getConfiguration().orientation);
+    }
+
+
+    public void logIO(int id,int device,int touchType,int multitouchID,int x,int y,int pressure,int devTime,long sysTime){
+        tbbDBHelper.logIO(id, device, touchType, multitouchID, x, y, pressure, devTime,sysTime);
+    }
+
 }

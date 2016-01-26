@@ -5,6 +5,7 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Timer;
 
 import blackbox.external.logger.DataWriter;
 import blackbox.external.logger.Logger;
@@ -40,9 +41,13 @@ public class IOTreeLogger extends Logger implements IOEventReceiver {
     private int mTouchDevice;
     private long mLastUpdate = 0;
 
+    private String mScreenshotFolder;
+    private Timer timer;
+    private ScreenLogger timerTask;
+
     public IOTreeLogger(String IOName, String treeName, String username, int ioFlushThreshold,
-                        int treeFlushThreshold, String interactionName) {
-        super(treeName, treeFlushThreshold,username);
+                        int treeFlushThreshold, String interactionName,boolean logDB) {
+        super(treeName, treeFlushThreshold,username,logDB);
         // Log.v(TBBService.TAG, SUBTAG + "created");
 
         // configure new logger parameters
@@ -56,7 +61,7 @@ public class IOTreeLogger extends Logger implements IOEventReceiver {
         mIntThreshold = ioFlushThreshold;
 
         mTPR = CoreController.sharedInstance().getActiveTPR();
-        mTouchDevice = CoreController.sharedInstance().monitorTouch(true);
+        mTouchDevice = CoreController.sharedInstance().monitorTouch(false);
 
     }
 
@@ -69,9 +74,10 @@ public class IOTreeLogger extends Logger implements IOEventReceiver {
             CoreController.sharedInstance().commandIO(
                     CoreController.MONITOR_DEV, mTouchDevice, false);
 
-            flushIO();
-            flushInteraction();
-
+            if(!logDB) {
+                flushIO();
+                flushInteraction();
+            }
         } catch (Exception e) {
             Toast.makeText(CoreController.sharedInstance().getTBBService(),
                     "TBB Exception", Toast.LENGTH_LONG).show();
@@ -86,8 +92,9 @@ public class IOTreeLogger extends Logger implements IOEventReceiver {
         try {
             super.onStorageUpdate(packageName);
             // Log.v(TBBService.TAG, SUBTAG + "onStorageUpdate");
-
-            setIOFileInfo();
+            if(!logDB)
+                setIOFileInfo();
+            setScreenshotFileInfo();
 
             //setInteractionFileInfo(path, sequence);
         } catch (Exception e) {
@@ -97,6 +104,15 @@ public class IOTreeLogger extends Logger implements IOEventReceiver {
         }
     }
 
+    private void setScreenshotFileInfo(){
+        mScreenshotFolder = mFolderName+"/"+ mUser + "/IOLogging/" +mPackage + "/" + mSequence + "_" +
+                mTimestamp + "/screenshots";
+        File folder =  new File(mScreenshotFolder);
+        if(!folder.exists()) {
+            folder.mkdirs();
+
+        }
+    }
     @Override
     public void onFlush() {
         try {
@@ -129,13 +145,14 @@ public class IOTreeLogger extends Logger implements IOEventReceiver {
 
 
 
-        File folder =  new File(mFolderName+"/"+ mUser + "/IOLogging/" +mPackage);
+        File folder =  new File(mFolderName+"/"+ mUser + "/IOLogging/" +mPackage+ "/"+ mSequence + "_" + mTimestamp);
         if(!folder.exists()) {
             folder.mkdirs();
 
         }
 
-        mIOFilename = mFolderName+"/"+ mUser +"/IOLogging/" +mPackage+ "/"+ mSequence + "_" + mTimestamp + ".json";
+
+        mIOFilename = mFolderName+"/"+ mUser +"/IOLogging/" +mPackage+ "/"+ mSequence + "_" + mTimestamp + "/IOLog.json";
         Log.d("DEBUG","io filename"+mIOFilename);
     }
 
@@ -312,30 +329,68 @@ public class IOTreeLogger extends Logger implements IOEventReceiver {
                     .identifyOnChange(type, code, value, timestamp)) != -1) {
 
                 TouchEvent te = mTPR.getlastTouch();
-                //  mTimestamp = timestamp;
-                String json = "{\"treeID\":" + id +
-                        " , \"dev\":" + device +
-                        " , \"type\":" + touchType +
-                        " , \"id\":" + te.getIdentifier() +
-                        " , \"x\":" + te.getX() +
-                        " , \"y\":" + te.getY() +
-                        " , \"pressure\":" + te.getPressure() +
-                        " , \"devTime\":" + te.getTime() +
-                        " , \"timestamp\":" + sysTime +
-                        "},";
-                writeIOAsync(json);
+
+                if(logDB){
+                    //TODO db things
+                    CoreController.sharedInstance().logIO(id,device,touchType,te.getIdentifier(),
+                            te.getX(),te.getY(),te.getPressure(),te.getTime(),sysTime);
+                }else {
+                    //  mTimestamp = timestamp;
+                    String json = "{\"treeID\":" + id +
+                            " , \"dev\":" + device +
+                            " , \"type\":" + touchType +
+                            " , \"id\":" + te.getIdentifier() +
+                            " , \"x\":" + te.getX() +
+                            " , \"y\":" + te.getY() +
+                            " , \"pressure\":" + te.getPressure() +
+                            " , \"devTime\":" + te.getTime() +
+                            " , \"timestamp\":" + sysTime +
+                            "},";
+                    writeIOAsync(json);
+                }
+
+                //TODO make screenshots' path go to db
+                switch(touchType){
+                    case TouchRecognizer.DOWN:
+                        //take screenshot, start timer
+                        Log.d("debug","TOUCH DOWN");
+                        if(timer==null) {
+                            timerTask = new ScreenLogger(mScreenshotFolder);
+                            timer = new Timer();
+
+                            timer.schedule(timerTask, 0, 1000);
+                        }
+                        break;
+
+                    case TouchRecognizer.UP:
+                        //stop timer.
+                        Log.d("debug","TOUCH UP");
+                        if(timer != null) {
+                            timer.cancel();
+                            timer.purge();
+                            timer = null;
+                        }
+                        break;
+                }
             }
+
+
         } else {
             if (type != 0) {
-                String json = "{\"treeID\":" + id +
-                        " , \"dev\":" + device +
-                        " , \"type\":" + type +
-                        " , \"code\":" + code +
-                        " , \"value\":" + value +
-                        " , \"devTime\":" + timestamp +
-                        " , \"timestamp\":" + sysTime +
-                        "},";
-                writeIOAsync(json);
+                if(logDB){
+                    //TODO db things
+                    //we dont log this ?
+                } else {
+                    String json = "{\"treeID\":" + id +
+                            " , \"dev\":" + device +
+                            " , \"type\":" + type +
+                            " , \"code\":" + code +
+                            " , \"value\":" + value +
+                            " , \"devTime\":" + timestamp +
+                            " , \"timestamp\":" + sysTime +
+                            "},";
+                    writeIOAsync(json);
+                }
             }
         }
     }
@@ -343,4 +398,6 @@ public class IOTreeLogger extends Logger implements IOEventReceiver {
     @Override
     public void onTouchReceived(int type) {
     }
+
+
 }

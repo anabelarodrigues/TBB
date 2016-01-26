@@ -16,7 +16,7 @@ import blackbox.external.logger.BaseLogger;
 import tbb.core.CoreController;
 import tbb.core.service.TBBService;
 import tbb.core.service.configuration.DataPermissions;
-import tbb.core.view.tbbDialog;
+import tbb.view.tbbDialog;
 
 
 /**
@@ -57,22 +57,26 @@ public class StorageCoordinator extends BroadcastReceiver {
                 Log.d("debug","storagecoordinator new folder time");
 
                 // CREATE FOLDER
-                File folder = new File(TBBService.STORAGE_FOLDER);
-                if (!folder.exists())
-                    folder.mkdirs();
+                //unnecessary if db
+                if(!CoreController.sharedInstance().checkIfDB()) {
 
-                Log.d("debug","storagecoordinator updating folder info");
+                    File folder = new File(TBBService.STORAGE_FOLDER);
+                    if (!folder.exists())
+                        folder.mkdirs();
+
+                    Log.d("debug", "storagecoordinator updating folder info");
 
 
-                Intent intentUpdate = new Intent();
-                intentUpdate.putExtra(BaseLogger.EXTRAS_FOLDER_PATH, TBBService.STORAGE_FOLDER);
-                intentUpdate.putExtra(BaseLogger.EXTRAS_SEQUENCE, "" + mAdjust);
+                    Intent intentUpdate = new Intent();
+                    intentUpdate.putExtra(BaseLogger.EXTRAS_FOLDER_PATH, TBBService.STORAGE_FOLDER);
+                    intentUpdate.putExtra(BaseLogger.EXTRAS_SEQUENCE, "" + mAdjust);
 
-                intentUpdate.setAction(BaseLogger.ACTION_UPDATE);
+                    intentUpdate.setAction(BaseLogger.ACTION_UPDATE);
 
-                intentUpdate.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
+                    intentUpdate.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
 
-                context.sendBroadcast(intentUpdate);
+                    context.sendBroadcast(intentUpdate);
+                }
 
 
                 // UPDATE THE SEQUENCE NUMBER FOR NEXT TIME
@@ -89,20 +93,26 @@ public class StorageCoordinator extends BroadcastReceiver {
                 Log.d("DEBUG", "BROADCAST RECEIVED: APP_RESUME: package name:"+packageName+" timestamp:"+timeStamp);
 
                 //write into messagelogger
-                CoreController.getmMessageLogger().writeAsync("\"APP_RESUME\",\"packageName\":\"" + packageName + "\",\"timestamp\":\"" + timeStamp + "\"");
-                CoreController.getmMessageLogger().onFlush();
+                if(CoreController.sharedInstance().checkIfDB()){
+                    //send the below intent with the correct namings
+                    //start package session !
+                    CoreController.sharedInstance().startPackageSession(packageName,timeStamp);
+                }else {
+                    CoreController.getmMessageLogger().writeAsync("\"APP_RESUME\",\"packageName\":\"" + packageName + "\",\"timestamp\":\"" + timeStamp + "\"");
+                    CoreController.getmMessageLogger().onFlush();
+                }
 
+                    //set file name for logging
+                //TODO necessary?
+                    Intent intentUpdate = new Intent();
+                    intentUpdate.putExtra(BaseLogger.EXTRAS_PACKAGE_NAME, packageName);
+                    intentUpdate.putExtra(BaseLogger.EXTRAS_TIMESTAMP, timeStamp);
 
-                //set file name for logging
-                Intent intentUpdate = new Intent();
-                intentUpdate.putExtra(BaseLogger.EXTRAS_PACKAGE_NAME, packageName);
-                intentUpdate.putExtra(BaseLogger.EXTRAS_TIMESTAMP, timeStamp);
+                    intentUpdate.setAction(BaseLogger.ACTION_IO_UPDATE);
 
-                intentUpdate.setAction(BaseLogger.ACTION_IO_UPDATE);
+                    intentUpdate.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
 
-                intentUpdate.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
-
-                context.sendBroadcast(intentUpdate);
+                    context.sendBroadcast(intentUpdate);
 
 
                 //starts monitoring touch
@@ -126,10 +136,6 @@ public class StorageCoordinator extends BroadcastReceiver {
 
                 Log.d("DEBUG", "BROADCAST RECEIVED: APP_PAUSE: package name:" + packageName + " timestamp:" + timeStamp);
 
-                Intent intentFlush = new Intent();
-                intentFlush.setAction(BaseLogger.ACTION_FLUSH);
-                intentFlush.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
-                context.sendBroadcast(intentFlush);
 
                 //stop logging
                 CoreController.sharedInstance().stopServiceNoBroadCast();
@@ -137,8 +143,20 @@ public class StorageCoordinator extends BroadcastReceiver {
 
 
                 //write into messagelogger
-                CoreController.getmMessageLogger().writeAsync("\"APP_PAUSE\",\"packageName\":\"" + packageName + "\",\"timestamp\":\"" + timeStamp + "\"");
-                CoreController.getmMessageLogger().onFlush();
+                if(CoreController.sharedInstance().checkIfDB()){
+                    //TODO db things
+                    // set end timestamp to the packagesession
+                    CoreController.sharedInstance().endPackageSession(packageName,timeStamp);
+                }else {
+                    Intent intentFlush = new Intent();
+                    intentFlush.setAction(BaseLogger.ACTION_FLUSH);
+                    intentFlush.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
+                    context.sendBroadcast(intentFlush);
+
+
+                    CoreController.getmMessageLogger().writeAsync("\"APP_PAUSE\",\"packageName\":\"" + packageName + "\",\"timestamp\":\"" + timeStamp + "\"");
+                    CoreController.getmMessageLogger().onFlush();
+                }
 
                 //ask user if they want to name this log? (e.g. level 5) -> use filename and rename
                 //TODO ask user if they want to create a data set from this gameplay
@@ -158,17 +176,25 @@ public class StorageCoordinator extends BroadcastReceiver {
                 Log.v(TBBService.TAG, SUBTAG + "ACTION_STOP");
 
                 //Logs first screen off
-                if(!TBBService.isRunning){
-                    CoreController.getmMessageLogger().writeAsync("\"TBB Service init\"");
-                    CoreController.getmMessageLogger().onFlush();
-                    TBBService.isRunning=true;
+                //TODO wut dis
+                if(!TBBService.isRunning && !CoreController.sharedInstance().checkIfDB()){
+
+                        CoreController.getmMessageLogger().writeAsync("\"TBB Service init\"");
+                        CoreController.getmMessageLogger().onFlush();
+                        TBBService.isRunning = true;
+
                 }
 
                 if(CoreController.sharedInstance().getIOLogging()){
-                    Intent intentFlush = new Intent();
-                    intentFlush.setAction(BaseLogger.ACTION_FLUSH);
-                    intentFlush.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
-                    context.sendBroadcast(intentFlush);
+                    if(CoreController.sharedInstance().checkIfDB()) {
+                       CoreController.sharedInstance().endSession(System.currentTimeMillis()); //TODO pass this time to logger as well?
+
+                    }else{
+                        Intent intentFlush = new Intent();
+                        intentFlush.setAction(BaseLogger.ACTION_FLUSH);
+                        intentFlush.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
+                        context.sendBroadcast(intentFlush);
+                    }
 
                     //stop logging
                     CoreController.sharedInstance().stopServiceNoBroadCast();
@@ -181,7 +207,7 @@ public class StorageCoordinator extends BroadcastReceiver {
                 }
 
                 // Tell the cloud storage to sync
-                //TODO later use this
+                //TODO later use this; adapt to db
 				/*CloudStorage.sharedInstance().cloudSync(
 						TBBService.STORAGE_FOLDER, mSequence, false);*/
 
@@ -199,15 +225,19 @@ public class StorageCoordinator extends BroadcastReceiver {
                     // it's Landscape
                     Log.d("DEBUG", "LANDSCAPE");
                     CoreController.sharedInstance().landscape = true;
-                    CoreController.getmMessageLogger().writeAsync("\"ORIENTATION_CHANGE\",\"timestamp\":\"" + System.currentTimeMillis() + "\"," +
-                            "\"orientation\":\"" + CoreController.sharedInstance().getTBBService().getResources().getConfiguration().orientation + "\"");
-                    CoreController.getmMessageLogger().onFlush();
+
                 }
                 else if (CoreController.sharedInstance().getTBBService().getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT
                         && CoreController.sharedInstance().landscape){
 
                     Log.d("DEBUG", "PORTRAIT");
                     CoreController.sharedInstance().landscape = false;
+
+                }
+
+                if(CoreController.sharedInstance().checkIfDB()){
+                    CoreController.sharedInstance().changeOrientation(System.currentTimeMillis());
+                }else {
                     CoreController.getmMessageLogger().writeAsync("\"ORIENTATION_CHANGE\",\"timestamp\":\"" + System.currentTimeMillis() + "\"," +
                             "\"orientation\":\"" + CoreController.sharedInstance().getTBBService().getResources().getConfiguration().orientation + "\"");
                     CoreController.getmMessageLogger().onFlush();

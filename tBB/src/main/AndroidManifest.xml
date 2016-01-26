@@ -53,7 +53,7 @@
                 <category android:name="android.accessibilityservice.SERVICE_SETTINGS" />
             </intent-filter>
         </activity>
-        <activity android:name="tbb.core.view.tbbDialog"
+        <activity android:name="tbb.view.tbbDialog"
        android:theme="@android:style/Theme.Holo.Dialog"
             android:launchMode="singleTop" ></activity>
         <activity
@@ -65,7 +65,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="tbb.core.view.tbbAccountPicker"
+            android:name="tbb.view.tbbAccountPicker"
             android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"></activity>
 
         <receiver

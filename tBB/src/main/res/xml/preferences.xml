@@ -15,7 +15,15 @@
             android:summary="@string/set_tpr"
             android:title="@string/tpr"
             />
-         
+
+        <ListPreference
+            android:defaultValue="db"
+            android:entries="@array/storageMode"
+            android:entryValues="@array/storageValues"
+            android:key="@string/BB.PREFERENCE.STORAGE_METHOD"
+            android:summary="@string/set_storage"
+            android:title="@string/storage"
+            />
           
          
       <CheckBoxPreference
