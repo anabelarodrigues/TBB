@@ -8,7 +8,10 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
 import tbb.core.CoreController;
+import tbb.touch.PackageSession;
+import tbb.touch.TouchPoint;
 import tbb.touch.TouchRecognizer;
+import tbb.touch.TouchSequence;
 
 /**
  * Created by Anabela on 21/01/2016.
@@ -57,8 +60,8 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
             "CREATE TABLE IF NOT EXISTS " + TbbContract.Session.TABLE_NAME + " (" +
                     TbbContract.Session._ID + INT_TYPE + " PRIMARY KEY," +
                     TbbContract.Session.COLUMN_NAME_USER_ID + INT_TYPE + NOT_NULL + COMMA_SEP +
-                    TbbContract.Session.COLUMN_NAME_START_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + NOT_NULL + COMMA_SEP +
-                    TbbContract.Session.COLUMN_NAME_END_TIMESTAMP + " DATETIME DEFAULT NULL" +
+                    TbbContract.Session.COLUMN_NAME_START_TIMESTAMP + TEXT_TYPE + NOT_NULL + COMMA_SEP +
+                    TbbContract.Session.COLUMN_NAME_END_TIMESTAMP + TEXT_TYPE + DEFAULT_NULL +
                     " )";
 
     private static final String SQL_DELETE_SESSION =
@@ -71,8 +74,8 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
                     TbbContract.PackageSession.COLUMN_NAME_NAME + TEXT_TYPE + DEFAULT_NULL + COMMA_SEP +
                     TbbContract.PackageSession.COLUMN_NAME_SESSION_ID + INT_TYPE + NOT_NULL + COMMA_SEP +
                     TbbContract.PackageSession.COLUMN_NAME_PACKAGE_ID + INT_TYPE + NOT_NULL + COMMA_SEP +
-                    TbbContract.PackageSession.COLUMN_NAME_START_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + COMMA_SEP +
-                    TbbContract.PackageSession.COLUMN_NAME_END_TIMESTAMP + " DATETIME" + DEFAULT_NULL + COMMA_SEP +
+                    TbbContract.PackageSession.COLUMN_NAME_START_TIMESTAMP + TEXT_TYPE + COMMA_SEP +
+                    TbbContract.PackageSession.COLUMN_NAME_END_TIMESTAMP + TEXT_TYPE + DEFAULT_NULL + COMMA_SEP +
                     TbbContract.PackageSession.COLUMN_NAME_ORIENTATION_CHANGE_COUNT + INT_TYPE + DEFAULT_ZERO +
 
                     " )";
@@ -99,8 +102,8 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
                     TbbContract.TouchSequence.COLUMN_NAME_PACKAGE_SESSION_ID + INT_TYPE + NOT_NULL + COMMA_SEP +
                     TbbContract.TouchSequence.COLUMN_NAME_SEQUENCE_NUMBER + INT_TYPE + DEFAULT_ZERO + COMMA_SEP +
                     TbbContract.TouchSequence.COLUMN_NAME_DEVICE + INT_TYPE + COMMA_SEP +
-                    TbbContract.TouchSequence.COLUMN_NAME_START_TIMESTAMP + " DATETIME" + NOT_NULL + COMMA_SEP +
-                    TbbContract.TouchSequence.COLUMN_NAME_END_TIMESTAMP + " DATETIME" + DEFAULT_NULL +
+                    TbbContract.TouchSequence.COLUMN_NAME_START_TIMESTAMP + TEXT_TYPE + NOT_NULL + COMMA_SEP +
+                    TbbContract.TouchSequence.COLUMN_NAME_END_TIMESTAMP + TEXT_TYPE + DEFAULT_NULL +
                     " )";
 
     private static final String SQL_DELETE_TOUCH_SEQUENCE =
@@ -118,7 +121,7 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
                     TbbContract.TouchPoint.COLUMN_NAME_Y + INT_TYPE + NOT_NULL + COMMA_SEP +
                     TbbContract.TouchPoint.COLUMN_NAME_PRESSURE + INT_TYPE + NOT_NULL + COMMA_SEP +
                     TbbContract.TouchPoint.COLUMN_NAME_DEVICE_TIME + INT_TYPE + COMMA_SEP +
-                    TbbContract.TouchPoint.COLUMN_NAME_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" +
+                    TbbContract.TouchPoint.COLUMN_NAME_TIMESTAMP + TEXT_TYPE +
                     " )";
 
     private static final String SQL_DELETE_TOUCHPOINT =
@@ -132,7 +135,7 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
 
                     TbbContract.ScreenSpecs.COLUMN_NAME_SESSION_ID + INT_TYPE + NOT_NULL + COMMA_SEP +
                     TbbContract.ScreenSpecs.COLUMN_NAME_PACKAGE_SESSION_ID + INT_TYPE + DEFAULT_NULL + COMMA_SEP +
-                    TbbContract.ScreenSpecs.COLUMN_NAME_TIMESTAMP + " DATETIME DEFAULT CURRENT_TIMESTAMP" + COMMA_SEP +
+                    TbbContract.ScreenSpecs.COLUMN_NAME_TIMESTAMP + TEXT_TYPE + COMMA_SEP +
                     TbbContract.ScreenSpecs.COLUMN_NAME_DENSITY + INT_TYPE + DEFAULT_NULL + COMMA_SEP +
                     TbbContract.ScreenSpecs.COLUMN_NAME_DENSITY_DPI + INT_TYPE + DEFAULT_NULL + COMMA_SEP +
                     TbbContract.ScreenSpecs.COLUMN_NAME_WIDTH + INT_TYPE + DEFAULT_NULL + COMMA_SEP +
@@ -254,7 +257,7 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
             return cursor.getInt(0);
         } else{
             //create user
-            Log.d(TAG,name+" is not in DB. Registering ...");
+            Log.d(TAG, name + " is not in DB. Registering ...");
             ContentValues contentValues = new ContentValues();
             contentValues.put(TbbContract.User.COLUMN_NAME_NAME, name);
             contentValues.put(TbbContract.User.COLUMN_NAME_EMAIL, email);
@@ -275,9 +278,9 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
 
         Log.d(TAG,"Session registration complete. ID is "+sessionID+".");
         if(sessionID > 0){
-            Log.d(TAG,"Registering device data. Values: density:"+density+" densityDpi:"+
-            densityDpi+" Screen width:"+width+" Screen height:"+height+ "Initial orientation:"+
-            orientation+".");
+            Log.d(TAG, "Registering device data. Values: density:" + density + " densityDpi:" +
+                    densityDpi + " Screen width:" + width + " Screen height:" + height + "Initial orientation:" +
+                    orientation + ".");
             ContentValues contentValues2 = new ContentValues();
             contentValues2.put(TbbContract.ScreenSpecs.COLUMN_NAME_SESSION_ID,sessionID);
             contentValues2.put(TbbContract.ScreenSpecs.COLUMN_NAME_TIMESTAMP,timestamp);
@@ -290,7 +293,7 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
 
             sessionActive = true;
 
-            Log.d(TAG,"Session is active.");
+            Log.d(TAG, "Session is active.");
         }
         return sessionID;
     }
@@ -362,10 +365,10 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
     public void endPackageSession(long timestamp) {
         //get active session
         if(packageSessionActive) {
-            Log.d(TAG,"Ending packageSession "+packageSessionID+" at "+timestamp+".");
+            Log.d(TAG, "Ending packageSession " + packageSessionID + " at " + timestamp + ".");
 
             ContentValues contentValues = new ContentValues();
-            contentValues.put(TbbContract.PackageSession.COLUMN_NAME_END_TIMESTAMP,timestamp);
+            contentValues.put(TbbContract.PackageSession.COLUMN_NAME_END_TIMESTAMP, timestamp);
             String where = TbbContract.PackageSession._ID+"=?";
             String[] whereArgs = new String[]{String.valueOf(packageSessionID)};
 
@@ -378,10 +381,10 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
     public void changeOrientation(long timestamp, int orientation) {
 
         if(sessionID > 0){
-            Log.d(TAG,"Orientation change in session "+sessionID+" at "+timestamp+" to orientation "+orientation);
+            Log.d(TAG, "Orientation change in session " + sessionID + " at " + timestamp + " to orientation " + orientation);
             ContentValues contentValues = new ContentValues();
             contentValues.put(TbbContract.ScreenSpecs.COLUMN_NAME_SESSION_ID,sessionID);
-            contentValues.put(TbbContract.ScreenSpecs.COLUMN_NAME_TIMESTAMP,timestamp);
+            contentValues.put(TbbContract.ScreenSpecs.COLUMN_NAME_TIMESTAMP, timestamp);
             contentValues.put(TbbContract.ScreenSpecs.COLUMN_NAME_ORIENTATION, orientation);
             if(packageSessionActive){
                 contentValues.put(TbbContract.ScreenSpecs.COLUMN_NAME_PACKAGE_SESSION_ID,packageSessionID);
@@ -471,7 +474,7 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
         ContentValues contentValues = new ContentValues();
         contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_DEVICE,device);
 
-        contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_START_TIMESTAMP,System.currentTimeMillis());
+        contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_START_TIMESTAMP, System.currentTimeMillis());
         contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_PACKAGE_SESSION_ID,packageSessionID);
         contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_SEQUENCE_NUMBER,sequence);
         id = (int) tbbDB.insert(TbbContract.TouchSequence.TABLE_NAME, null, contentValues);
@@ -482,13 +485,97 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
     }
 
     private void endSequence(){
-        Log.d(TAG,"Ending sequence "+sequence+" with ID "+touchSequenceID);
+        Log.d(TAG, "Ending sequence " + sequence + " with ID " + touchSequenceID);
         ContentValues contentValues = new ContentValues();
         contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_END_TIMESTAMP,System.currentTimeMillis());
         String where = TbbContract.TouchSequence._ID+"=?";
         String[] whereArgs = new String[]{String.valueOf(touchSequenceID)};
 
         tbbDB.update(TbbContract.TouchSequence.TABLE_NAME, contentValues, where, whereArgs);
+
+    }
+
+    //AT LEAST TEST THIS
+
+    public void readPackageSession(int packageSession){
+
+        String query ="SELECT "+TbbContract.PackageSession.COLUMN_NAME_NAME+","+
+                TbbContract.PackageSession.COLUMN_NAME_START_TIMESTAMP+" FROM "+
+                TbbContract.PackageSession.TABLE_NAME+" WHERE "+TbbContract.PackageSession._ID+
+                "="+packageSession;
+        Cursor data =tbbDB.rawQuery(query,null);
+
+        if(data.moveToNext()) {
+
+
+            PackageSession session = new PackageSession(packageSession, data.getString(0), data.getString(1));
+
+
+            //queri about packagesession info
+            boolean notDone = true;
+            int limit = 0;
+            int prevSequence=-1;
+            while (notDone) {
+                //Compose the statement
+                String statement = "SELECT tp." + TbbContract.TouchPoint.COLUMN_NAME_TOUCH_TYPE_ID + ",tp." +
+                        TbbContract.TouchPoint.COLUMN_NAME_X + ",tp." + TbbContract.TouchPoint.COLUMN_NAME_Y +
+                        ",tp." + TbbContract.TouchPoint.COLUMN_NAME_TIMESTAMP +
+                        ",tp." + TbbContract.TouchPoint.COLUMN_NAME_MULTITOUCH_POINT +
+                        ",tp." + TbbContract.TouchPoint.COLUMN_NAME_TOUCH_SEQUENCE_ID +
+                        " FROM " + TbbContract.TouchPoint.TABLE_NAME + " tp," + TbbContract.TouchSequence.TABLE_NAME +
+                        " ts WHERE tp." + TbbContract.TouchPoint.COLUMN_NAME_TOUCH_SEQUENCE_ID + "=ts." +
+                        TbbContract.TouchSequence._ID + " AND ts." + TbbContract.TouchSequence.COLUMN_NAME_PACKAGE_SESSION_ID +
+                        "=" + packageSession + " ORDER BY tp." + TbbContract.TouchPoint.COLUMN_NAME_TIMESTAMP +
+                        " LIMIT '" + limit + "', 1000";
+                //Execute the query
+                Cursor cursor = tbbDB.rawQuery(statement, null);
+
+                //check if empty. check if runs out before reaching 1000. change notDone boolean
+                int count = 0;
+                while (cursor.moveToNext()) {
+                    int touchType = cursor.getInt(0);
+                    int x = cursor.getInt(1);
+                    int y = cursor.getInt(2);
+                    String timestamp = cursor.getString(3);
+                    int multitouchPoint = cursor.getInt(4);
+                    int sequence=cursor.getInt(5);
+
+                    Log.d(TAG,"touchType:"+touchType+" x:"+x+" y:"+y+" timestamp"+ timestamp
+                            +" multitouchpoint"+ multitouchPoint + " touchSequenceID:"+ sequence);
+
+                    TouchPoint temp = new TouchPoint(touchType,x,y,timestamp,multitouchPoint);
+
+
+
+                    if(prevSequence<0 || prevSequence != sequence){
+                        session.addSequence(sequence, new TouchSequence(getSequenceStartTime(sequence)));
+                    }
+                    session.addTouchPointToSequence(sequence,temp);
+
+                    count++;
+                }
+
+                //check if done
+                if (count < 1000) {
+                    notDone = false;
+                } else {
+                    limit += 1000;
+                }
+                cursor.close();
+
+            }
+
+        }
+    }
+
+    private String getSequenceStartTime(int sequenceID){
+        String statement = "SELECT " + TbbContract.TouchSequence.COLUMN_NAME_START_TIMESTAMP +
+                " FROM " + TbbContract.TouchSequence.TABLE_NAME + " WHERE " + TbbContract.TouchSequence.COLUMN_NAME_PACKAGE_SESSION_ID +
+                "=" + sequenceID;
+        //Execute the query
+        Cursor cursor = tbbDB.rawQuery(statement, null);
+
+        return cursor.getString(0);
 
     }
 }

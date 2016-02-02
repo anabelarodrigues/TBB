@@ -49,6 +49,16 @@ public class TbbContract {
         public static final String COLUMN_NAME_VALUE = "value";
     }
 
+    public static abstract class TouchSequence implements BaseColumns {
+        public static final String TABLE_NAME = "touchSequence";
+        public static final String COLUMN_NAME_PACKAGE_SESSION_ID = "packageSessionID";
+        public static final String COLUMN_NAME_DEVICE = "device";
+
+        public static final String COLUMN_NAME_SEQUENCE_NUMBER = "sequenceNumber";
+        public static final String COLUMN_NAME_START_TIMESTAMP = "startTime";
+        public static final String COLUMN_NAME_END_TIMESTAMP = "endTime";
+    }
+
     public static abstract class TouchPoint implements BaseColumns {
         public static final String TABLE_NAME = "touchPoint";
         public static final String COLUMN_NAME_TOUCH_SEQUENCE_ID = "touchSequenceID";
@@ -76,14 +86,6 @@ public class TbbContract {
 
     }
 
-    public static abstract class TouchSequence implements BaseColumns {
-        public static final String TABLE_NAME = "touchSequence";
-        public static final String COLUMN_NAME_PACKAGE_SESSION_ID = "packageSessionID";
-        public static final String COLUMN_NAME_DEVICE = "device";
 
-        public static final String COLUMN_NAME_SEQUENCE_NUMBER = "sequenceNumber";
-        public static final String COLUMN_NAME_START_TIMESTAMP = "startTime";
-        public static final String COLUMN_NAME_END_TIMESTAMP = "endTime";
-    }
 
 }

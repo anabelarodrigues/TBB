@@ -34,12 +34,20 @@ public abstract class TouchRecognizer {
 		HashMap<Integer, Integer> ys = new HashMap<Integer, Integer>();
 		HashMap<Integer, Integer> ids = new HashMap<Integer, Integer>();
 
+		HashMap<Integer, Integer> lastTouch = new HashMap<Integer, Integer>();
+		HashMap<Integer, Integer> lastXs = new HashMap<Integer, Integer>();
+		HashMap<Integer,Integer> lastYs = new HashMap<Integer, Integer>();
+		HashMap<Integer, Integer> lastEventCode = new HashMap<Integer, Integer>();
+
+
+
+
 		HashMap<Integer, TouchEvent> tou = new HashMap<Integer, TouchEvent>();
-		protected int lastX;
-		protected int lastY;
+	//	protected int lastX;
+	//	protected int lastY;
 		protected int slideXorigin;
 		protected int slideYorigin;
-		protected int lastEventCode = -1;
+	//	protected int lastEventCode = -1;
 		protected int pressure;
 		protected int touchMajor;
 		protected int touchMinor;
@@ -56,10 +64,10 @@ public abstract class TouchRecognizer {
 		protected int biggestIdentifier = 0;
 
 		// used to prevent double tap
-		protected int lastTouch = 0;
+		//protected int lastTouch = 0;
 		protected int doubleTapThreshold = 500;
 
-		// used to identify long touch
+		// TODO MT? used to identify long touch
 		protected int longTouchTime = 0;
 		protected final int  LONGPRESS_THRESHOLD=400;
 		
@@ -82,13 +90,14 @@ public abstract class TouchRecognizer {
 		public abstract int identifyOnRelease(int type, int code, int value,
 				int timestamp);
 		
-		public int getLastX() {
+		/*public int getLastX() {
 			return lastX;
 		}
 
 		public int getLastY() {
 			return lastY;
 		}
+		*/
 
 		public int getOriginX() {
 			return slideXorigin;

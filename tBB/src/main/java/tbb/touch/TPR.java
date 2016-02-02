@@ -16,7 +16,7 @@ import java.util.Map;
 public class TPR extends TouchRecognizer {
 
 	private final String LT = "TPR";
-	private int slot = 0;
+	private int slot = 0,lastSlot;
 
 	/**
 	 * Identify type of touch (slide/touch/long press)
@@ -24,11 +24,11 @@ public class TPR extends TouchRecognizer {
 	 * @return
 	 */
 
-	private int identifyTouch() {
+	private int identifyTouch(int identifier) {
 		double distance = 0;
 		if (touches.size() < 5) {
 			touches.clear();
-			if ((longTouchTime - lastTouch) < -LONGPRESS_THRESHOLD)
+			if ((longTouchTime - lastTouch.get(identifier)) < -LONGPRESS_THRESHOLD)
 				return LONGPRESS;
 			return TOUCHED;
 		} else {
@@ -68,29 +68,36 @@ public class TPR extends TouchRecognizer {
 		else if (code == ABS_MT_TOUCH_MINOR)
 			touchMinor = value;
 		if (code == ABS_MT_POSITION_X) {
-			lastX = value;
-		} else if (code == ABS_MT_POSITION_Y)
-			lastY = value;
+
+			//check if identifier is in array, update value
+			lastXs.put(identifier,value);
+
+		} else if (code == ABS_MT_POSITION_Y) {
+			//if it already contains identifier, itll just update the value
+				lastYs.put(identifier, value);
+		}
 		else if (code == SYN_REPORT && value == 0
-				&& lastEventCode != ABS_MT_TRACKING_ID) {
-			TouchEvent p = new TouchEvent(lastX, lastY, timestamp, pressure,
+				&& lastEventCode.get(identifier) != ABS_MT_TRACKING_ID) {
+			TouchEvent p = new TouchEvent(lastXs.get(identifier), lastYs.get(identifier), timestamp, pressure,
 					touchMajor, touchMinor, identifier);
 			longTouchTime = timestamp;
 			touches.add(p);
 		}
 		if (code == ABS_MT_TRACKING_ID && value == -1
-				&& (lastEventCode == SYN_REPORT) && touches.size() > 0) {
-			lastEventCode = -1;
+				&& (lastEventCode.get(identifier) == SYN_REPORT) && touches.size() > 0) {
+			lastEventCode.put(identifier,-1); //update or remove value at identifier
 			// prevents double tap
-			if ((lastTouch - timestamp) < -doubleTapThreshold) {
+			if ((lastTouch.get(identifier) - timestamp) < -doubleTapThreshold) {
 
-				lastTouch = timestamp;
+				//check if identifier is in array, update value
+				lastTouch.put(identifier,timestamp);
 
-				return identifyTouch();
+				return identifyTouch(identifier);
 			} else
 				return -1;
 		}
-		lastEventCode = code;
+		//check if identifier is in array, update value
+		lastEventCode.put(identifier, code);
 		return -1;
 	}
 
@@ -102,12 +109,22 @@ public class TPR extends TouchRecognizer {
 			Log.d(LT, "key: " + entry.getKey() + " value: "+entry.getValue()); ;
 		}
 
-		Log.d(LT,"PRINTING tou");
+		Log.d(LT, "PRINTING tou");
 		for (Map.Entry<Integer, TouchEvent> entry : tou.entrySet()) {
 			Log.d(LT, "key: " + entry.getKey() + " value: "+entry.getValue().toString()); ;
 		}
 	}
 
+	private int getSlot(){
+		if(ids.containsValue(identifier)){
+			for (Map.Entry<Integer, Integer> entry : ids.entrySet()) {
+				if ( entry.getValue().equals(identifier) ) {
+					return entry.getKey();
+				}
+			}
+		}
+		return -1;
+	}
 	/**
 	 * Register in array all touch positions until finger release
 	 * 
@@ -121,62 +138,81 @@ public class TPR extends TouchRecognizer {
 		switch (code) {
 		case ABS_MT_POSITION_X:
 			// Log.d(LT, "X: " + value ); //" time:"
-			xs.put(slot, value);
+
+				xs.put(slot, value);
 			break;
 		case ABS_MT_POSITION_Y:
-			ys.put(slot, value);
+				ys.put(slot, value);
 			break;
 		case ABS_MT_PRESSURE:
-			pressure = value;
+			pressure = value;//if this ever matters to anyone in the future, make a pressure array
 			break;
 		case ABS_MT_TOUCH_MAJOR:
-			touchMajor = value;
+			touchMajor = value; //if this ever matters to anyone in the future, make a major array
 			break;
 		case ABS_MT_TOUCH_MINOR:
-			touchMinor = value;
+			touchMinor = value; //if this ever matters to anyone in the future, make a minor array
 			break;
 		case ABS_MT_TRACKING_ID:
 			Log.d(LT, "ID: " + value); //" time:"
 			identifier = value;
 			if (identifier > 0) {
+				//findFreeSlot();
+
+					ids.put(slot, identifier);
 
 				tou.remove(ids.get(slot));
-				ids.put(slot, identifier);
+
 
 			}
 
 			break;
 		case ABS_MT_SLOT:
-			 Log.d(LT, "SLOT: " + value ); //" time:"
+			 //" time:"
+			//lastSlot=value; only use for down and up?
 			slot = value;
 			if (ids.containsKey(slot))
 				identifier = ids.get(slot);
+
+			Log.d("TbbDatabaseHelper", "SLOT: " + value + " Identifier:" +identifier );
 
 			printMaps();
 			break;
 		case SYN_REPORT:
 
+			Log.d("TbbDatabaseHelper","SYN_REPORT: identifier:"+identifier+" slot:"+slot+
+					" timestamp:"+timestamp+" pressure:"+pressure+" touchMajor:"+touchMajor+
+					" touchMinor:"+touchMinor+".");
+
+			//TODO MOVE ALL THIS TO SLOT ^
 			if (identifier > 0) {
-				if (tou.containsKey(ids.get(slot))) {
-					tou.put(ids.get(slot),
-							new TouchEvent(xs.get(slot), ys.get(slot),
-									timestamp, pressure, touchMajor,
-									touchMinor, ids.get(slot)));
 
-					return MOVE;
+				if(ids.containsValue(identifier)){
+					//slot=getSlot();
+							tou.put(ids.get(slot),
+									new TouchEvent(xs.get(slot), ys.get(slot),
+											timestamp, pressure, touchMajor,
+											touchMinor, ids.get(slot)));
+							return MOVE;
+
+				} else {
+
+					tou.put(ids.get(slot),
+							new TouchEvent(xs.get(slot), ys.get(slot), timestamp,
+									pressure, touchMajor, touchMinor, ids.get(slot)));
+					return DOWN;
 				}
-				tou.put(ids.get(slot),
-						new TouchEvent(xs.get(slot), ys.get(slot), timestamp,
-								pressure, touchMajor, touchMinor, ids.get(slot)));
 
-				return DOWN;
-			} else if (identifier == -1) {
-				if (ids.containsKey(slot)) {
+
+			}
+			else if (identifier == -1) {
+				if (ids.containsKey(slot)) { //find slot to remove
 					tou.put(ids.get(slot),
 							new TouchEvent(xs.get(slot), ys.get(slot),
 									timestamp, pressure, touchMajor,
 									touchMinor, ids.get(slot)));
 
+					//ids.remove(slot);
 					return UP;
 				}
 			}
@@ -186,7 +222,30 @@ public class TPR extends TouchRecognizer {
 		Log.d(LT, "t:" + type + " c:" + code + " v:" + value);
 		return -1;
 	}
-
+/*
+	private void findFreeSlot(){
+		if (!ids.containsKey(0)) {
+			slot = 0;
+		} else if (!ids.containsKey(1)) {
+			slot = 1;
+		} else if (!ids.containsKey(2)) {
+			slot = 2;
+		} else if (!ids.containsKey(3)) {
+			slot = 3;
+		} else if (!ids.containsKey(4)) {
+			slot = 4;
+		} else if (!ids.containsKey(5)) {
+			slot = 5;
+		} else if (!ids.containsKey(6)) {
+			slot = 6;
+		} else if (!ids.containsKey(7)) {
+			slot = 7;
+		} else if (!ids.containsKey(8)) {
+			slot = 8;
+		} else if (!ids.containsKey(9)) {
+			slot = 9;
+		}
+	}*/
 	private void checkResetTouches() {
 		boolean reset = true;
 		for (int i = 0; i < id_touches.size(); i++) {

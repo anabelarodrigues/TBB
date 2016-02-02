@@ -49,34 +49,47 @@ public class TPROldProtocol extends TouchRecognizer {
 	 */
 	@Override
 	public int identifyOnRelease(int type, int code, int value, int timestamp) {
-		// Log.d(LT,"t:"+ type+ " c:" + code + " v:"+ value);
-		if(code==ABS_MT_TRACKING_ID){
-			identifier=value;
-		}else
-		if (code == ABS_MT_PRESSURE)
+		// + timestamp);
+
+		if (code == ABS_MT_TRACKING_ID) {
+			identifier = value;
+		} else if (code == ABS_MT_PRESSURE)
 			pressure = value;
 		else if (code == ABS_MT_TOUCH_MAJOR)
 			touchMajor = value;
-		if (code == ABS_MT_POSITION_X)
-			lastX = value;
-		else if (code == ABS_MT_POSITION_Y)
-			lastY = value;
-		else if (code == SYN_MT_REPORT && value == 0) {
-			TouchEvent p = new TouchEvent(lastX, lastY, timestamp, pressure, touchMajor,-1,identifier );
+		else if (code == ABS_MT_TOUCH_MINOR)
+			touchMinor = value;
+		if (code == ABS_MT_POSITION_X) {
+
+			//check if identifier is in array, update value
+			lastXs.put(identifier,value);
+
+		} else if (code == ABS_MT_POSITION_Y) {
+			//if it already contains identifier, itll just update the value
+			lastYs.put(identifier, value);
+		}
+		else if (code == SYN_REPORT && value == 0
+				&& lastEventCode.get(identifier) != ABS_MT_TRACKING_ID) {
+			TouchEvent p = new TouchEvent(lastXs.get(identifier), lastYs.get(identifier), timestamp, pressure,
+					touchMajor, touchMinor, identifier);
+			longTouchTime = timestamp;
 			touches.add(p);
 		}
-		if (code == SYN_MT_REPORT && lastEventCode == SYN_REPORT && touches.size() > 0) {
-			lastEventCode = -1;
-			//prevents double tap
-			if((lastTouch-timestamp)<-doubleTapThreshold){
-				//Log.d(LT, "last time:"+lastTouch+" timestamp:" +timestamp + " diference" + (lastTouch-timestamp));
-				lastTouch=timestamp;
+		if (code == ABS_MT_TRACKING_ID && value == -1
+				&& (lastEventCode.get(identifier) == SYN_REPORT) && touches.size() > 0) {
+			lastEventCode.put(identifier,-1); //update or remove value at identifier
+			// prevents double tap
+			if ((lastTouch.get(identifier) - timestamp) < -doubleTapThreshold) {
+
+				//check if identifier is in array, update value
+				lastTouch.put(identifier,timestamp);
+
 				return identifyTouch();
-			}
-			else
+			} else
 				return -1;
 		}
-		lastEventCode = code;
+		//check if identifier is in array, update value
+		lastEventCode.put(identifier,code);
 		return -1;
 	}
 	
@@ -91,10 +104,10 @@ public class TPROldProtocol extends TouchRecognizer {
 		
 		switch(code){
 			case ABS_MT_POSITION_X:
-				lastX=value;
+				lastXs.put(identifier,value);
 				break;
 			case ABS_MT_POSITION_Y:
-				lastY=value;
+				lastYs.put(identifier,value);
 				break;
 			case ABS_MT_PRESSURE:
 				pressure=value;
@@ -106,15 +119,15 @@ public class TPROldProtocol extends TouchRecognizer {
 				identifier=value;			
 				break;
 			case SYN_MT_REPORT:
-				TouchEvent p = new TouchEvent(lastX, lastY, timestamp, pressure, touchMajor,-1,identifier);
+				TouchEvent p = new TouchEvent(lastXs.get(identifier), lastYs.get(identifier), timestamp, pressure, touchMajor,-1,identifier);
 				touches.add(p);
 				
 				//register touch id (alive), to detect ups on multi touch
 				id_touches.add(identifier);
 				
 				//all fingers up
-				if(lastEventCode== SYN_REPORT){
-					lastEventCode = -1;
+				if(lastEventCode.get(identifier)== SYN_REPORT){
+					lastEventCode.put(identifier,-1);
 					touches.clear();
 					numberTouches=0;
 					biggestIdentifier=0;
@@ -123,13 +136,13 @@ public class TPROldProtocol extends TouchRecognizer {
 				}
 				//first down touch
 				if(touches.size()<2){
-					lastEventCode = -1;
+					lastEventCode.put(identifier,-1);
 					return DOWN;
 				}
 				//down if another finger is used
 				if(identifier> biggestIdentifier ) {
 					biggestIdentifier=identifier;
-					lastEventCode = -1;
+					lastEventCode.put(identifier,-1);
 					numberTouches++;
 					return DOWN;
 				}
@@ -137,7 +150,7 @@ public class TPROldProtocol extends TouchRecognizer {
 				
 				//check if the touch event moved
 				if(checkIfMoved(p)){
-					lastEventCode=-1;
+					lastEventCode.put(identifier,-1);
 					return MOVE;
 				}
 				break;
@@ -166,7 +179,7 @@ public class TPROldProtocol extends TouchRecognizer {
 				break;
 		}
 		 
-		lastEventCode = code;
+		lastEventCode.put(identifier,code);
 		
 		//Log.d(LT, "t:" + type + " c:" + code + " v:" + value);
 		return -1;
