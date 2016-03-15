@@ -16,7 +16,10 @@ import java.util.Map;
 public class TPRtabpro extends TouchRecognizer {
 
 	private final String LT = "TPRtabpro";
-	private int slot = 0;
+	private int slot = 0,nextSlot=0;
+	private boolean wasUP = false;
+	private int lastID = -1;
+	private int lastTimestamp = -1;
 	//private boolean multitouch = false;
 
 	/**
@@ -101,9 +104,15 @@ public class TPRtabpro extends TouchRecognizer {
 		lastEventCode.put(identifier, code);
 		return -1;
 	}
+/*
+	private void cleanTouches(){
+		for (Map.Entry<Integer, TouchEvent> entry : tou.entrySet()) {
+		//	Log.d(LT, "key: " + entry.getKey() + " value: "+entry.getValue().toString()); ;
+			tou.remove(entry.getKey());
+		}
 
-
-
+	}
+*/
 	private void printMaps(){
 		Log.d(LT,"PRINTING IDS");
 		for (Map.Entry<Integer, Integer> entry : ids.entrySet()) {
@@ -116,16 +125,6 @@ public class TPRtabpro extends TouchRecognizer {
 		}
 	}
 
-	private int getSlot(){
-		if(ids.containsValue(identifier)){
-			for (Map.Entry<Integer, Integer> entry : ids.entrySet()) {
-				if ( entry.getValue().equals(identifier) ) {
-					return entry.getKey();
-				}
-			}
-		}
-		return -1;
-	}
 	/**
 	 * Register in array all touch positions until finger release
 	 * 
@@ -135,135 +134,241 @@ public class TPRtabpro extends TouchRecognizer {
 	@Override
 	public int identifyOnChange(int type, int code, int value, int timestamp) {
 		Log.d(LT, "t:" + type + " c:" + code + " v:" + value); // " time:"
+		/*if(lastTimestamp>-1){
+			if(){}
+		}*/
 
 		switch (code) {
 		case ABS_MT_POSITION_X:
 			// Log.d(LT, "X: " + value ); //" time:"
 
-				xs.put(slot, value);
+			//xs.put(slot, value);
+			x = value;
+			Log.d("TbbDatabaseHelper","x is " + value + " when slot is " + slot);
 			break;
 		case ABS_MT_POSITION_Y:
-				ys.put(slot, value);
+			//ys.put(slot, value);
+			y = value;
+			Log.d("TbbDatabaseHelper", "y is " + value + " when slot is " + slot);
 			break;
 		case ABS_MT_PRESSURE:
-			pressure = value;//if this ever matters to anyone in the future, make a pressure array
+			pressure = value;
+			Log.d("TbbDatabaseHelper","pressure is " + value + " when slot is "+slot);
 			break;
 		case ABS_MT_TOUCH_MAJOR:
-			touchMajor = value; //if this ever matters to anyone in the future, make a major array
+			touchMajor = value;
+			Log.d("TbbDatabaseHelper","touchMajor is " + value + " when slot is "+slot);
 			break;
 		case ABS_MT_TOUCH_MINOR:
-			touchMinor = value; //if this ever matters to anyone in the future, make a minor array
+			touchMinor = value;
+			Log.d("TbbDatabaseHelper","touchMinor is " + value + " when slot is "+slot);
 			break;
 		case ABS_MT_TRACKING_ID:
-			Log.d(LT, "ID: " + value); //" time:"
+			Log.d("TbbDatabaseHelper","Identifier is " + value + ".");
 			identifier = value;
-			if (identifier > 0) {
-				//findFreeSlot();
-
-				ids.put(slot, identifier);
-
-				tou.remove(ids.get(slot));
-
-
+			if (identifier > lastID) {
+				lastID=identifier;
 			}
+			wasUP=false; //if we go through here its either an up or a down.
 
 			break;
 		case ABS_MT_SLOT:
-			 //" time:"
-			//lastSlot=value; only use for down and up?
-			slot = value;
-		//	multitouch = true;
-			if (ids.containsKey(slot))
+
+			Log.d("TbbDatabaseHelper","Current slot is "+slot+". Next slot is being attributed:"+value);
+
+			//this wasnt here before ..
+			if(wasUP && ids.get(slot)!=null){
 				identifier = ids.get(slot);
+				wasUP = false;
+			}
 
-			Log.d("TbbDatabaseHelper","ABS_MT_SLOT: identifier:"+identifier+" slot:"+slot+
-					" timestamp:"+timestamp+" pressure:"+pressure+" touchMajor:"+touchMajor+
-					" touchMinor:"+touchMinor+".");
+			if(identifier>0) {
+				if (!ids.containsValue(identifier)) {
+					tou.clear();
 
-			printMaps();
+					ids.put(slot, identifier);
+					coordinateCheck();
 
-			//HAD TO MOVE THIS UP TO WORK ON TABLET ..
-			if (identifier > 0) {
-
-				if(ids.containsValue(identifier) && ids.get(slot) != null && ids.get(slot) == identifier){
-					//slot=getSlot();
-					tou.put(ids.get(slot),
-							new TouchEvent(xs.get(slot), ys.get(slot),
-									timestamp, pressure, touchMajor,
-									touchMinor, ids.get(slot)));
-					return MOVE;
-
-				} else if(!ids.containsValue(identifier)){
+					Log.d("TbbDatabaseHelper", "ABS_MT_SLOT DOWN: identifier:" + identifier + " slot:" + slot +
+							" x:" + xs.get(slot) + " y:" + ys.get(slot) + " timestamp:" + timestamp + " pressure:" + pressure + " touchMajor:" + touchMajor +
+							" touchMinor:" + touchMinor + ".");
 
 					tou.put(ids.get(slot),
 							new TouchEvent(xs.get(slot), ys.get(slot), timestamp,
 									pressure, touchMajor, touchMinor, ids.get(slot)));
+
+					printMaps();
+
+					slot = value;
+
 					return DOWN;
-				}
 
+				} else if (ids.containsKey(slot)) {
+					tou.clear();
 
-			}/*
-			else if (identifier == -1) {
-				if (ids.containsKey(slot)) { //find slot to remove
+					coordinateCheck();
+
 					tou.put(ids.get(slot),
 							new TouchEvent(xs.get(slot), ys.get(slot),
 									timestamp, pressure, touchMajor,
 									touchMinor, ids.get(slot)));
+					printMaps();
 
-					//ids.remove(slot);
-					return UP;
+					Log.d("TbbDatabaseHelper", "ABS_MT_SLOT MOVE: identifier:" + ids.get(slot) + " slot:" + slot +
+							" x:" + xs.get(slot) + " y:" + ys.get(slot) + " timestamp:" + timestamp + " pressure:" + pressure + " touchMajor:" + touchMajor +
+							" touchMinor:" + touchMinor + ".");
+
+					slot = value;
+
+					return MOVE;
+
+				} else if(x>-1 && y>-1){ //is a DOWN but didnt receive identifier!
+					tou.clear();
+					identifier = lastID+1;
+					lastID=identifier;
+
+					ids.put(slot, identifier);
+					coordinateCheck();
+
+					Log.d("TbbDatabaseHelper", "ABS_MT_SLOT DOWN: identifier:" + identifier + " slot:" + slot +
+							" x:" + xs.get(slot) + " y:" + ys.get(slot) + " timestamp:" + timestamp + " pressure:" + pressure + " touchMajor:" + touchMajor +
+							" touchMinor:" + touchMinor + ".");
+
+					tou.put(ids.get(slot),
+							new TouchEvent(xs.get(slot), ys.get(slot), timestamp,
+									pressure, touchMajor, touchMinor, ids.get(slot)));
+
+					printMaps();
+
+					slot = value;
+
+					return DOWN;
+
 				}
-			}*/
+			} else if(identifier == -1 && ids.get(slot) != null) {
+				tou.clear();
+
+				coordinateCheck();
+
+				Log.d("TbbDatabaseHelper", "ABS_MT_SLOT UP: identifier:" + ids.get(slot) + " slot:" + slot +
+							" x:" + xs.get(slot) + " y:" + ys.get(slot) + " timestamp:" + timestamp + " pressure:" + pressure + " touchMajor:" + touchMajor +
+							" touchMinor:" + touchMinor + ".");
+
+				tou.put(ids.get(slot),
+						new TouchEvent(xs.get(slot), ys.get(slot),
+								timestamp, pressure, touchMajor,
+								touchMinor, ids.get(slot)));
+				printMaps();
+				ids.remove(slot);
+				xs.remove(slot);
+				ys.remove(slot);
+
+				wasUP=true;
+				slot = value;
+
+				return UP;
+
+			}
+			slot = value;
+			break;
 
 
 		case SYN_REPORT:
 
+			Log.d("TbbDatabaseHelper","SYN_REPORT. slot is "+slot+". ids size is "+ids.size());
 
-			if(slot == 0 || identifier == -1){
-				Log.d("TbbDatabaseHelper","SYN_REPORT: identifier:"+identifier+" slot:"+slot+
-						" timestamp:"+timestamp+" pressure:"+pressure+" touchMajor:"+touchMajor+
-						" touchMinor:"+touchMinor+".");
-
+			if(wasUP && ids.get(slot)!=null){
+				identifier = ids.get(slot);
+				wasUP = false;
+			}
 
 				if (identifier > 0) {
+					if(!ids.containsValue(identifier)){
+						tou.clear();
 
-					if(ids.containsValue(identifier) && ids.get(slot) != null && ids.get(slot) == identifier){
-						//slot=getSlot();
-						tou.put(ids.get(slot),
-								new TouchEvent(xs.get(slot), ys.get(slot),
-										timestamp, pressure, touchMajor,
-										touchMinor, ids.get(slot)));
-						return MOVE;
+						ids.put(slot, identifier);
+						coordinateCheck();
 
-					} else if(!ids.containsValue(identifier)){
+						Log.d("TbbDatabaseHelper", "SYN_REPORT: DOWN identifier:" + ids.get(slot) + " slot:" + slot +
+								" x:" + xs.get(slot) + " y:" + ys.get(slot) + " timestamp:" + timestamp +
+								" pressure:" + pressure + " touchMajor:" + touchMajor +
+								" touchMinor:" + touchMinor + ".");
 
 						tou.put(ids.get(slot),
 								new TouchEvent(xs.get(slot), ys.get(slot), timestamp,
 										pressure, touchMajor, touchMinor, ids.get(slot)));
+
+						printMaps();
+
 						return DOWN;
+					}else if(ids.get(slot) != null && ids.get(slot) == identifier){
+						tou.clear();
+
+						coordinateCheck();
+
+						Log.d("TbbDatabaseHelper", "SYN_REPORT: MOVE identifier:" + ids.get(slot) + " slot:" + slot +
+								" x:" + xs.get(slot) + " y:" + ys.get(slot) + " timestamp:" + timestamp +
+								" pressure:" + pressure + " touchMajor:" + touchMajor +
+								" touchMinor:" + touchMinor + ".");
+
+						tou.put(ids.get(slot),
+								new TouchEvent(xs.get(slot), ys.get(slot),
+										timestamp, pressure, touchMajor,
+										touchMinor, ids.get(slot)));
+
+						printMaps();
+
+						return MOVE;
+
 					}
 
 
 				}
 				else if (identifier == -1) {
-					if (ids.containsKey(slot)) { //find slot to remove
+					if (ids.containsKey(slot)) {
+						Log.d("TbbDatabaseHelper", "SYN_REPORT: UP identifier:" + ids.get(slot) + " slot:" + slot +
+								" x:" + xs.get(slot) + " y:" + ys.get(slot) + " timestamp:" + timestamp +
+								" pressure:" + pressure + " touchMajor:" + touchMajor +
+								" touchMinor:" + touchMinor + ".");
+
+						tou.clear();
+
 						tou.put(ids.get(slot),
 								new TouchEvent(xs.get(slot), ys.get(slot),
 										timestamp, pressure, touchMajor,
 										touchMinor, ids.get(slot)));
 
-						//ids.remove(slot);
+						ids.remove(slot);
+						//xs.remove(slot);
+						//ys.remove(slot);
+
+						wasUP=true;
+
+						printMaps();
+
 						return UP;
 					}
 				}
 
-			}
+
+			break;
 
 
 		}
 
 		Log.d(LT, "t:" + type + " c:" + code + " v:" + value);
 		return -1;
+	}
+
+	private void coordinateCheck(){
+		if(x>-1){
+			xs.put(slot, x);
+			x=-1;
+		}
+		if(y>-1){
+			ys.put(slot, y);
+			y=-1;
+		}
 	}
 
 	private void checkResetTouches() {
@@ -298,7 +403,11 @@ public class TPRtabpro extends TouchRecognizer {
 
 	@Override
 	public TouchEvent getlastTouch() {
-
-		return tou.get(ids.get(slot));
+		//tou always only has one entry
+		TouchEvent te = null;
+		for (Map.Entry<Integer, TouchEvent> entry : tou.entrySet()) {
+			te = entry.getValue();
+		}
+		return te;
 	}
 }

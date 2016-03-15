@@ -53,7 +53,7 @@ public class TbbContract {
         public static final String TABLE_NAME = "touchSequence";
         public static final String COLUMN_NAME_PACKAGE_SESSION_ID = "packageSessionID";
         public static final String COLUMN_NAME_DEVICE = "device";
-
+        public static final String COLUMN_NAME_ORIENTATION = "orientation";
         public static final String COLUMN_NAME_SEQUENCE_NUMBER = "sequenceNumber";
         public static final String COLUMN_NAME_START_TIMESTAMP = "startTime";
         public static final String COLUMN_NAME_END_TIMESTAMP = "endTime";
@@ -83,6 +83,8 @@ public class TbbContract {
         public static final String COLUMN_NAME_WIDTH= "width";
         public static final String COLUMN_NAME_HEIGHT = "height";
         public static final String COLUMN_NAME_ORIENTATION = "orientation";
+        public static final String COLUMN_NAME_DRIVER_WIDTH= "driverWidth";
+        public static final String COLUMN_NAME_DRIVER_HEIGHT= "driverHeight";
 
     }
 

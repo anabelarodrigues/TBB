@@ -28,9 +28,10 @@ import blackbox.tinyblackbox.R;
 import tbb.core.CoreController;
 import tbb.core.ioManager.Monitor;
 import tbb.core.logger.KeystrokeLogger;
-import tbb.view.tbbAccountPicker;
-import tbb.touch.TPROldProtocol;
 import tbb.touch.TPR;
+import tbb.touch.TPROldProtocol;
+import tbb.touch.TPRtabpro;
+import tbb.view.TBBAccountPicker;
 
 /**
  * TinyBlackBoxService
@@ -109,7 +110,7 @@ public class TBBService extends AccessibilityService {
 					.addApi(Drive.API)
 					.addScope(Drive.SCOPE_FILE)
 					.build();*/
-			Intent loginIntent = new Intent(this,tbbAccountPicker.class);
+			Intent loginIntent = new Intent(this,TBBAccountPicker.class);
 			loginIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 			startActivity(loginIntent);
 
@@ -136,7 +137,8 @@ public class TBBService extends AccessibilityService {
 			// listen for screen on/off actions
 
 
-			IntentFilter listenerFilter = new IntentFilter();
+
+					IntentFilter listenerFilter = new IntentFilter();
 			listenerFilter.addAction(Intent.ACTION_SCREEN_ON);
 			listenerFilter.addAction(Intent.ACTION_SCREEN_OFF);
             listenerFilter.addAction(Intent.ACTION_CONFIGURATION_CHANGED);
@@ -294,7 +296,11 @@ public class TBBService extends AccessibilityService {
 			Log.v(TAG, SUBTAG + "tab");
 			CoreController.sharedInstance()
 					.registerActivateTouch(new TPR());
-		} else {
+		} else if (tpr.equalsIgnoreCase("tabpro")) {
+			Log.v(TAG, SUBTAG + "tabpro");
+			CoreController.sharedInstance()
+					.registerActivateTouch(new TPRtabpro());
+		}else {
 			Log.v(TAG, SUBTAG + "null");
 			if (tpr.equals("null")) {
 				Toast.makeText(this,

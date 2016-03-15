@@ -13,7 +13,7 @@ import blackbox.tinyblackbox.R;
 /**
  * Created by Anabela on 04/01/2016.
  */
-public class tbbDialog extends Activity {
+public class TBBDialog extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -21,14 +21,17 @@ public class tbbDialog extends Activity {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.tbbdialog);
 
-        Button yes = (Button) findViewById(R.id.button2);
+        Button canvasDraw = (Button) findViewById(R.id.button2);
         Button later = (Button) findViewById(R.id.button);
+        Button injection = (Button) findViewById(R.id.injection);
 
-        yes.setOnClickListener(new View.OnClickListener() {
+        canvasDraw.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Log.d("debug", "yes onclick");
-                Intent intent = new Intent(getApplicationContext(),tbbEditor.class);
+                //CoreController.sharedInstance().stopServiceNoBroadCast();
+                Intent intent = new Intent(getApplicationContext(),TBBCanvasDraw.class);
+                intent.putExtra("packageSessionID", getIntent().getIntExtra("packageSessionID",-1));
                 startActivity(intent);
                 finish();
             }
@@ -37,6 +40,18 @@ public class tbbDialog extends Activity {
         later.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                finish();
+            }
+        });
+
+        injection.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d("debug", "yes onclick");
+                //CoreController.sharedInstance().stopServiceNoBroadCast();
+                Intent intent = new Intent(getApplicationContext(),TBBInjection.class);
+                intent.putExtra("packageSessionID", getIntent().getIntExtra("packageSessionID",-1));
+                startActivity(intent);
                 finish();
             }
         });

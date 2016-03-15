@@ -21,7 +21,7 @@ public class Monitor {
 
 	private int touchIndex = -1;
 	boolean monitoring[];
-	private boolean virtualDriveEnable = false; 
+	private boolean virtualDriveEnable = true;//todo
 	private boolean rooted = false;
 	/**
 	 * Initialises list of devices
@@ -34,6 +34,7 @@ public class Monitor {
 		this.touchIndex = touchIndex;
 		Events ev = new Events();
 		dev = ev.Init();
+
 		//if a device was successfuly opened then the deviec is rooted
 		if(dev.size()>0) {
 			rooted=true;
@@ -96,6 +97,7 @@ public class Monitor {
 	 */
 	public void injectToVirtual(int type, int code, int value) {
 		if (virtualDriveEnable) {
+			Log.d("debug","virtual drive enabled");
 			Events.sendVirtual(type, code, value);
 		}
 	}
@@ -110,7 +112,8 @@ public class Monitor {
 	 */
 	public void injectToTouch(int type, int code, int value) {
 		// Log.d(SUBTAG, "touch index:" + touchIndex);
-		dev.get(touchIndex).send(touchIndex, type, code, value);
+		int thing = dev.get(touchIndex).send(touchIndex, type, code, value);
+		Log.d("debug","injectToTouch:"+thing);
 	}
 
 	/**
@@ -184,6 +187,9 @@ public class Monitor {
 		return s;
 	}
 
+	public String getDevicePath(){
+		return dev.get(touchIndex).getPath();
+	}
 	/**
 	 * Stop all monitoring
 	 */
@@ -207,12 +213,17 @@ public class Monitor {
 	 */
 
 	public void createVirtualTouchDrive(int protocol) {
+		Log.d("debug","TOUCH INDEX");
+		Log.d("debug","index:"+touchIndex+" device_name:"+dev.get(touchIndex).getName());
+
+		int success = dev.get(0).createVirtualDrive(
+				dev.get(touchIndex).getName(), protocol,
+				CoreController.sharedInstance().getTBBService().getScreenSize()[0],
+				CoreController.sharedInstance().getTBBService().getScreenSize()[1]);
+
 		Log.d(SUBTAG,
 				"Virtual drive created "
-						+ dev.get(0).createVirtualDrive(
-								dev.get(touchIndex).getName(), protocol,
-                                CoreController.sharedInstance().getTBBService().getScreenSize()[0],
-                                CoreController.sharedInstance().getTBBService().getScreenSize()[1]));
+						+ success);
 
 		virtualDriveEnable = true;
 	}
@@ -236,6 +247,7 @@ public class Monitor {
 			for (int i = 0; i < devices.length; i++) {
 				Log.d(TBBService.TAG, "device " +devices[i] + " " + i);
 				if (devices[i] != null && devices[i].contains("touchscreen")){
+					touchIndex = i; //TODO
 					monitorDevice(i, state);
 					return i;
 				}
@@ -245,6 +257,8 @@ public class Monitor {
 		}
 
 	}
+
+
 
 
 }

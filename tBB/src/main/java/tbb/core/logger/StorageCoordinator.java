@@ -16,7 +16,7 @@ import blackbox.external.logger.BaseLogger;
 import tbb.core.CoreController;
 import tbb.core.service.TBBService;
 import tbb.core.service.configuration.DataPermissions;
-import tbb.view.tbbDialog;
+import tbb.view.TBBDialog;
 
 
 /**
@@ -133,8 +133,10 @@ public class StorageCoordinator extends BroadcastReceiver {
             else if (intent.getAction().equals(AssistivePlay.ACTION_APP_PAUSE)) {
                 String packageName = intent.getStringExtra("packageName");
                 long timeStamp = intent.getLongExtra("timestamp", -1);
+                int packageSessionID = intent.getIntExtra("packageSessionID",-1);
 
-                Log.d("DEBUG", "BROADCAST RECEIVED: APP_PAUSE: package name:" + packageName + " timestamp:" + timeStamp);
+                Log.d("DEBUG", "BROADCAST RECEIVED: APP_PAUSE: package name:" + packageName + " timestamp:" + timeStamp+
+                " packageSessionID:"+packageSessionID);
 
 
                 //stop logging
@@ -163,8 +165,8 @@ public class StorageCoordinator extends BroadcastReceiver {
                 //offer to choose various gameplay sessions
                 // if yes, grab last file.
 
-                Intent intent2=new Intent(CoreController.sharedInstance().getTBBService().getApplicationContext(), tbbDialog.class);
-
+                Intent intent2=new Intent(CoreController.sharedInstance().getTBBService().getApplicationContext(), TBBDialog.class);
+                intent2.putExtra("packageSessionID",packageSessionID);
                 intent2.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 CoreController.sharedInstance().getTBBService().getApplicationContext().startActivity(intent2);
 
@@ -176,7 +178,6 @@ public class StorageCoordinator extends BroadcastReceiver {
                 Log.v(TBBService.TAG, SUBTAG + "ACTION_STOP");
 
                 //Logs first screen off
-                //TODO wut dis
                 if(!TBBService.isRunning && !CoreController.sharedInstance().checkIfDB()){
 
                         CoreController.getmMessageLogger().writeAsync("\"TBB Service init\"");

@@ -8,7 +8,7 @@
     
         
          <ListPreference
-            android:defaultValue="tab2"
+            android:defaultValue="tabpro"
             android:entries="@array/tprMode"
             android:entryValues="@array/tprValues"
             android:key="@string/BB.PREFERENCE.TOUCH_RECOGNIZER"

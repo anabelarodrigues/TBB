@@ -81,6 +81,12 @@ public class TBBPreferencesActivity extends PreferenceActivity {
                         editor.putBoolean(
                                 getString(R.string.BB_PREFERENCE_LOGIO), checked);
                         editor.commit();
+
+                        if(checked){
+                            Toast.makeText(getApplicationContext(),"LOGIO CHECKED",Toast.LENGTH_SHORT);
+                        }else{
+                            Toast.makeText(getApplicationContext(),"LOGIO UNCHECKED",Toast.LENGTH_SHORT);
+                        }
                         return true;
                 }else if(preference.getKey().equals(getString(R.string.BB_PREFERENCE_ENCRYPTION_LEVEL))) {
                     getPreferences(MODE_PRIVATE).edit().putString(getString(R.string.BB_PREFERENCE_ENCRYPTION_LEVEL), o.toString()).commit();

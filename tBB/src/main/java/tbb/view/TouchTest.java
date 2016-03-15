@@ -16,20 +16,20 @@ import tbb.touch.TouchRecognizer;
 
 public class TouchTest implements IOEventReceiver {
 	private TouchRecognizer mTPR;
-	private int mTouchDevice;
+	public int mTouchDevice;
 
-	private long mTimestamp = 0;
+	public long mTimestamp = 0;
 
 	private int mDevSpecialKeys;
 	private int mDevHomeAndVolume;
 
-	private boolean adapt;
-	private boolean saved;
-	private boolean saving;
-	private boolean isInjecting;
-	private boolean landscape;
+	public boolean adapt;
+	public boolean saved;
+	public boolean saving;
+	public boolean isInjecting;
+	public boolean landscape;
 
-	private ArrayList<IOEvent> toReproduce;
+	public ArrayList<IOEvent> toReproduce;
 	private LinkedList<Long> timeouts;
 	long lastTime;
 
@@ -51,119 +51,33 @@ public class TouchTest implements IOEventReceiver {
 		mTPR = CoreController.sharedInstance().getActiveTPR();
 		mTouchDevice = CoreController.sharedInstance().monitorTouch(true);
 
-		mDevSpecialKeys = 8;
+	//	mDevSpecialKeys = 8;
 
 		// monitor devices
+	/*	Log.d("debug","moniter_dev");
 		CoreController.sharedInstance().commandIO(CoreController.MONITOR_DEV,
 				mDevSpecialKeys, true);
 
+		Log.d("debug", "set_block");
 		CoreController.sharedInstance().commandIO(CoreController.SET_BLOCK,
-				mDevSpecialKeys, true);
+				mDevSpecialKeys, true);*/
 
-		int protocol = 1;
+		int protocol = 2;
+
+		Log.d("debug","virtual_touch");
 		CoreController.sharedInstance().commandIO(
 				CoreController.CREATE_VIRTUAL_TOUCH, protocol, true);
 
+		Log.d("debug","Successfully begun");
 	}
 
-	@Override
-	public void onUpdateIOEvent(int device, int type, int code, int value,
-			int timestamp) {
 
-		if (mTouchDevice == device) {
-			int touchType;
-			// Log.d(TBBService.TAG, " t:" + type + " c:" + code + " v:" + value
-			// + " t:" + timestamp);
-			if (saving) {
-				toReproduce.add(new IOEvent(type, code, value, timestamp));
-				return;
-			}
-
-			if ((touchType = mTPR
-					.identifyOnChange(type, code, value, timestamp)) != -1) {
-
-				TouchEvent te = mTPR.getlastTouch();
-				if (touchType == mTPR.UP) {
-					if (adapt && !isInjecting) {
-						Log.d(TBBService.TAG, "REPRODUCING!");
-						CoreController.sharedInstance()
-								.showToast("REPRODUCING");
-
-						isInjecting = true;
-						if(minY < 0 || minX < 0 || maxY <0 || maxX <0){
-							getMinMaxValues();
-						}
-						reproduce(0, te.getX(), te.getY());
-					}
-				}
-
-			}
-		} else {
-			if (type != 0) {
-				if (code == 139 && value == 0) {
-					lastTime = 0;
-					if (!saved) {
-						if (!saving) {
-							saving = true;
-							Log.d(TBBService.TAG, "SAVING...");
-							CoreController.sharedInstance().showToast(
-									"SAVING...");
-
-						} else {
-							Log.d(TBBService.TAG, "SAVED!");
-							CoreController.sharedInstance().showToast("SAVED");
-
-							saving = false;
-							saved = true;
-						}
-					} else {
-						adapt = !adapt;
-						Log.d(TBBService.TAG, "ENABLE ADAPT!");
-
-						if (!adapt) {
-							Log.d(TBBService.TAG, "RESET");
-							CoreController.sharedInstance().showToast("STOPPED");
-
-
-							saved = false;
-							isInjecting = false;
-							toReproduce.clear();
-						} else {
-							CoreController.sharedInstance().showToast("ADAPT");
-
-						/*	int orientation = TBBService.getDisplay()
-									.getRotation();
-
-							if (orientation == Surface.ROTATION_90
-									|| orientation == Surface.ROTATION_270) {*/
-								landscape = true;
-							/*} else {
-								landscape = false;
-							}*/
-						}
-					}
-					CoreController.sharedInstance().commandIO(
-							CoreController.SET_BLOCK, mTouchDevice,
-							adapt | saving);
-
-				} else {
-					if (value == 0 && !adapt) {
-						CoreController.sharedInstance().back();
-					} else if (value == 0) {
-						changeMode();
-					}
-
-				}
-
-			}
-		}
-	}
 
 	private void changeMode() {
 
 		mode+=1;
 		mode=mode%totalModes;
-		CoreController.sharedInstance().showToast("CHANGE MODE: " + mode);
+		//CoreController.sharedInstance().showToast("CHANGE MODE: " + mode);
 
 		
 	}
@@ -242,6 +156,88 @@ public class TouchTest implements IOEventReceiver {
 
 	}
 
+
+	/*
+	 * private void performTap(final TouchEvent te, final int width) { int x =
+	 * CoreController.sharedInstance().xToScreenCoord(te.getX()); int y =
+	 * CoreController.sharedInstance().yToScreenCoord(te.getY());
+	 * Log.d(TBBService.TAG, " x:" + x + " y:" + y);
+	 * 
+	 * CoreController.sharedInstance().injectToVirtual(3,
+	 * TouchRecognizer.ABS_MT_TRACKING_ID, te.getIdentifier());
+	 * 
+	 * CoreController.sharedInstance().injectToVirtual(3,
+	 * TouchRecognizer.ABS_MT_TOUCH_MAJOR, te.getTouchMajor());
+	 * 
+	 * CoreController.sharedInstance().injectToVirtual(3,
+	 * TouchRecognizer.ABS_MT_PRESSURE, te.getPressure());
+	 * CoreController.sharedInstance().injectToVirtual(3,
+	 * TouchRecognizer.ABS_MT_POSITION_X,x);// te.getX());
+	 * 
+	 * CoreController.sharedInstance().injectToVirtual(3,
+	 * TouchRecognizer.ABS_MT_POSITION_Y,y);// te.getY());
+	 * 
+	 * CoreController.sharedInstance().injectToVirtual(0, 0, 0);
+	 * 
+	 * CoreController.sharedInstance().injectToVirtual(3,
+	 * TouchRecognizer.ABS_MT_TRACKING_ID, -1);
+	 * CoreController.sharedInstance().injectToVirtual(0, 0, 0);
+	 * 
+	 * }
+	 */
+
+	@Override
+	public void onUpdateIOEvent(int device, int type, int code, int value, int timestamp, long systTime) {
+
+		if (mTouchDevice == device) {
+			int touchType;
+			 Log.d(TBBService.TAG, " t:" + type + " c:" + code + " v:" + value
+			 + " t:" + timestamp);
+			Log.d(TBBService.TAG, " saving:" + saving + " adapt:" + adapt + " isInjecting:" + isInjecting
+					+ " saved:" + saved);
+			if (saving) {
+				toReproduce.add(new IOEvent(type, code, value, timestamp));
+				return;
+			}
+
+			if ((touchType = mTPR
+					.identifyOnChange(type, code, value, timestamp)) != -1) {
+
+				TouchEvent te = mTPR.getlastTouch();
+				if (touchType == mTPR.UP) {
+					if (adapt && !isInjecting) {
+						Log.d(TBBService.TAG, "REPRODUCING!");
+						CoreController.sharedInstance()
+								.showToast("re");
+
+						isInjecting = true;
+						if(minY < 0 || minX < 0 || maxY <0 || maxX <0){
+							getMinMaxValues();
+						}
+						reproduce(0, te.getX(), te.getY());
+					}
+				}
+
+			}
+		} else {
+			if (type != 0) {
+				if (code == 139 && value == 0)  {
+					if (value == 0 && !adapt) {
+						CoreController.sharedInstance().back();
+					} else if (value == 0) {
+						changeMode();
+					}
+
+				}
+
+			}
+		}
+	}
+
+	@Override
+	public void onTouchReceived(int type) {}
+
+
 	private void reproduce(int index, int x, int y) {
 		Log.d(TBBService.TAG, "adapting:" + x + " " + y);
 		/*Display mdisp = CoreController.sharedInstance().getWindowManager().getDefaultDisplay();
@@ -254,58 +250,58 @@ public class TouchTest implements IOEventReceiver {
 			IOEvent io = toReproduce.get(index);
 			Log.d("debug","io code:"+io.getCode()+" type:"+io.getType()+" value:"+io.getValue());
 			//if(io.getCode() == 57 || io.getCode() == 53 || io.getCode() == 54 || io.getCode() == 58 || io.getCode() == 48){
-				int value = io.getValue();
-				int code = io.getCode();
-				// adapting to the real screen coords
-				int diffX = centerX-x;
-				int diffY=centerY-y;
+			int value = io.getValue();
+			int code = io.getCode();
+			// adapting to the real screen coords
+			int diffX = centerX-x;
+			int diffY=centerY-y;
 
+//TODO
+			if ((landscape && code == 54) || (!landscape && code == 53)) {
+				//value = getAdaptedCoordX(value, diffX); //CoreController.sharedInstance().xToScreenCoord(value);
+				x=value;
+				lastX=io.getValue();
+			} else if ((landscape && code == 53) || (!landscape && code == 54)) {
+			//	value = getAdaptedCoordY(value, diffY);//CoreController.sharedInstance().yToScreenCoord(value);
+				y=value;
+				lastY=io.getValue();
+			}
 
-				if ((landscape && code == 54) || (!landscape && code == 53)) {
-					value = getAdaptedCoordX(value, diffX); //CoreController.sharedInstance().xToScreenCoord(value);
-					x=value;
-					lastX=io.getValue();
-				} else if ((landscape && code == 53) || (!landscape && code == 54)) {
-					value = getAdaptedCoordY(value, diffY);//CoreController.sharedInstance().yToScreenCoord(value);
-					y=value;
-					lastY=io.getValue();
-				}
-
-
-				CoreController.sharedInstance().injectToVirtual(io.getType(),
-						io.getCode(), value);
-				index++;
-				if (index < toReproduce.size()) {
-					int delay = toReproduce.get(index).getTimestamp()
-							- io.getTimestamp();
-					// Log.d(TBBService.TAG, "Delay: " + delay);
-					if (delay > 0) {
-						Timer t = new Timer();
-						if (delay < 50) {
-							t.schedule(new ReproduceTimer(index,x,y), 0);
-						} else {
-							t.schedule(new ReproduceTimer(index,x,y), delay);
-						}
+//TODO change to virtual once touch works
+			CoreController.sharedInstance().injectToVirtual(io.getType(),
+					io.getCode(), value);
+			index++;
+			if (index < toReproduce.size()) {
+				int delay = toReproduce.get(index).getTimestamp()
+						- io.getTimestamp();
+				// Log.d(TBBService.TAG, "Delay: " + delay);
+				if (delay > 0) {
+					Timer t = new Timer();
+					if (delay < 50) {
+						t.schedule(new ReproduceTimer(index,x,y), 0);
 					} else {
-						reproduce(index, x,y);
+						t.schedule(new ReproduceTimer(index,x,y), delay);
 					}
 				} else {
-					isInjecting = false;
+					reproduce(index, x,y);
 				}
-
+			} else {
+				isInjecting = false;
 			}
+
+		}
 
 		//}
 	}
 
 	private int getAdaptedCoordX(int value, int coord) {
 		switch (mode){
-		case REPLICATE: 
+			case REPLICATE:
 				return value;
 			case REPLICATE_ON_POINT:
 				return value+coord;
-		default:
-			return value;
+			default:
+				return value;
 
 		}
 	}
@@ -338,39 +334,5 @@ public class TouchTest implements IOEventReceiver {
 		}
 	}
 
-	/*
-	 * private void performTap(final TouchEvent te, final int width) { int x =
-	 * CoreController.sharedInstance().xToScreenCoord(te.getX()); int y =
-	 * CoreController.sharedInstance().yToScreenCoord(te.getY());
-	 * Log.d(TBBService.TAG, " x:" + x + " y:" + y);
-	 * 
-	 * CoreController.sharedInstance().injectToVirtual(3,
-	 * TouchRecognizer.ABS_MT_TRACKING_ID, te.getIdentifier());
-	 * 
-	 * CoreController.sharedInstance().injectToVirtual(3,
-	 * TouchRecognizer.ABS_MT_TOUCH_MAJOR, te.getTouchMajor());
-	 * 
-	 * CoreController.sharedInstance().injectToVirtual(3,
-	 * TouchRecognizer.ABS_MT_PRESSURE, te.getPressure());
-	 * CoreController.sharedInstance().injectToVirtual(3,
-	 * TouchRecognizer.ABS_MT_POSITION_X,x);// te.getX());
-	 * 
-	 * CoreController.sharedInstance().injectToVirtual(3,
-	 * TouchRecognizer.ABS_MT_POSITION_Y,y);// te.getY());
-	 * 
-	 * CoreController.sharedInstance().injectToVirtual(0, 0, 0);
-	 * 
-	 * CoreController.sharedInstance().injectToVirtual(3,
-	 * TouchRecognizer.ABS_MT_TRACKING_ID, -1);
-	 * CoreController.sharedInstance().injectToVirtual(0, 0, 0);
-	 * 
-	 * }
-	 */
-
-	@Override
-	public void onTouchReceived(int type) {
-		// TODO Auto-generated method stub
-
-	}
 
 }

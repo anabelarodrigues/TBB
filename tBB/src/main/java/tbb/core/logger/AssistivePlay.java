@@ -1,15 +1,14 @@
 package tbb.core.logger;
 
-import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.support.v4.view.accessibility.AccessibilityEventCompat;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
 
-import java.util.List;
-
+import tbb.core.CoreController;
 import tbb.interfaces.AccessibilityEventReceiver;
 
 /**
@@ -22,30 +21,28 @@ public class AssistivePlay implements AccessibilityEventReceiver {
 
     private Context context;
     private int lastEvent;
-    private String lastPackage,activePackage;
-    private Boolean appActive;
+    private String activePackage=null;
+    private Boolean isSystemApp;
+    private PackageManager mPackageManager;
 
     public AssistivePlay(Context context){
         this.context = context;
        // lastEvent=-1;
        // lastPackage="";
-        appActive = false;
+        isSystemApp = false;
+        mPackageManager = CoreController.sharedInstance().getTBBService().getPackageManager();
+        Log.d("debug","Initializing Accessibility Event Receiver");
     }
 
     @Override
     public void onUpdateAccessibilityEvent(AccessibilityEvent event) {
 
         String packageName = event.getPackageName().toString();
-        int eventType=event.getEventType();
+        printEventType(event);
 
-        //printEventType(event);
-
-        if((eventType== AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
-                || eventType== AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)
-
+        if((event.getEventType()== AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
                 && !packageName.equals("blackbox.tinyblackbox")){
-            identifyEvent(event,eventType);
-
+            identifyEvent(event);
         }
 
       //  lastEvent = eventType;
@@ -142,20 +139,86 @@ public class AssistivePlay implements AccessibilityEventReceiver {
         return type;
 
     }
+    public void identifyEvent(AccessibilityEvent event){
+        String packageName = event.getPackageName().toString();
 
+        if(activePackage != null && !activePackage.equals(packageName)){
+            if(!isSystemApp){
+                //pause active package
+                Log.d("debug", activePackage + " paused.");
+                Toast.makeText(context, activePackage + " closed.", Toast.LENGTH_SHORT).show();
+                broadcastIntent(1, activePackage);
+            }
+
+            activePackage = packageName;
+            isSystemApp = isSystemApp(activePackage);
+            if(!isSystemApp){
+                //resume current package
+                Log.d("debug", activePackage + " in foreground.");
+                Toast.makeText(context, activePackage + " in foreground.", Toast.LENGTH_SHORT).show();
+                broadcastIntent(0, activePackage);
+            }
+
+        } else if(activePackage == null){
+            activePackage = packageName;
+            isSystemApp = isSystemApp(activePackage);
+        }
+
+
+    }
+
+    /**
+     * Match signature of application to identify that if it is signed by system
+     * or not.
+     *
+     * @param packageName
+     *            package of application. Can not be blank.
+     * @return <code>true</code> if application is signed by system certificate,
+     *         otherwise <code>false</code>
+     */
+    public boolean isSystemApp(String packageName) {
+
+       if(packageName.startsWith("com.android.")
+               || packageName.startsWith("com.google.")
+               || packageName.startsWith("com.sec.android.")
+               || packageName.equals("android")
+               || packageName.equals("system")){
+           return true;
+       }
+        return false;
+    }
+
+    /*public boolean isSystemApp(String packageName) {
+    try {
+        // Get packageinfo for target application
+        PackageInfo targetPkgInfo = mPackageManager.getPackageInfo(
+                packageName, PackageManager.GET_SIGNATURES);
+        // Get packageinfo for system package
+        PackageInfo sys = mPackageManager.getPackageInfo(
+                "android", PackageManager.GET_SIGNATURES);
+        // Match both packageinfo for there signatures
+        return (targetPkgInfo != null && targetPkgInfo.signatures != null && sys.signatures[0]
+                .equals(targetPkgInfo.signatures[0]));
+    } catch (PackageManager.NameNotFoundException e) {
+        return false;
+    }
+}*/
+/* OLD VERSION; KEEP THIS IN CASE SHIT HAPPENS ; activeApp CHANGED TO isSystemApp
     public void identifyEvent(AccessibilityEvent event, int eventType){
         ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-        List<ActivityManager.RunningAppProcessInfo> runningTasks = activityManager.getRunningAppProcesses();
+        List<ActivityManager.RunningAppProcessInfo> runningTasks = activityManager.getRunningAppProcesses(); //doesn't work on 6!
 
         String packageName = event.getPackageName().toString();
         int broadcast = -1;
 
 
-
+        Log.d("debug","RUNNING PROCESSES");
+        if(runningTasks.size()>0) {
             for (ActivityManager.RunningAppProcessInfo info : runningTasks) {
-    //find the package in list of running apps to see state
+                Log.d("debug", "TASK:" +info.processName+" importance:"+ info.importance);
+                //find the package in list of running apps to see state
                 if (info.processName.equals(packageName) && info.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
-                        &&eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                        && eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
 
                     //an new app opened, that isn't a system app, and without another one being active
                     if (!packageName.startsWith("com.android.")
@@ -166,24 +229,15 @@ public class AssistivePlay implements AccessibilityEventReceiver {
                             && !appActive) {
 
 
-                        //is this distinction necessary? open for the first time
-                        /*if (eventType == AccessibilityEventCompat.TYPE_WINDOW_CONTENT_CHANGED
-                                && lastEvent == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
-                                && lastPackage.equals(packageName)) {
-                            Toast.makeText(context, "Opened for first time.", Toast.LENGTH_SHORT).show();
-                            activePackage = packageName;
-                            appActive = true;
-                            broadcast = 0;
 
-                        }*/
 
 
                         Log.d("debug", packageName + " in foreground.");
-                            activePackage = packageName;
+                        activePackage = packageName;
 
                         Toast.makeText(context, activePackage + " in foreground.", Toast.LENGTH_SHORT).show();
-                            appActive = true;
-                            broadcast = 0;
+                        appActive = true;
+                        broadcast = 0;
                     }
 
                     //a new app opened which isnt the one we were monitoring. time to close.
@@ -195,34 +249,33 @@ public class AssistivePlay implements AccessibilityEventReceiver {
                                 && !packageName.startsWith("com.google.")
                                 && !packageName.startsWith("com.sec.android.")
                                 && !packageName.equals("android")
-                                && !packageName.equals("system")){
+                                && !packageName.equals("system")) {
                             //close this and open another!
                             Toast.makeText(context, activePackage + " closed.", Toast.LENGTH_SHORT).show();
                             broadcastIntent(1, activePackage);
                             activePackage = packageName;
                             broadcast = 0;
                             Toast.makeText(context, activePackage + " in foreground.", Toast.LENGTH_SHORT).show();
-                        }else{
+                        } else {
                             //just close this
-                            appActive=false;
+                            appActive = false;
                             Toast.makeText(context, activePackage + " closed.", Toast.LENGTH_SHORT).show();
                             broadcast = 1;
                         }
-
 
 
                     }
 
                 }
             }
-
+        }
             if(broadcast>-1){
                 broadcastIntent(broadcast,activePackage);
             }
 
 
     }
-
+*/
     private void broadcastIntent(int type, String packageName){
         Intent toBroadcastIntent = new Intent();
         switch (type){
@@ -231,8 +284,8 @@ public class AssistivePlay implements AccessibilityEventReceiver {
                 break;
             case 1:
                 toBroadcastIntent.setAction(ACTION_APP_PAUSE);
+                toBroadcastIntent.putExtra("packageSessionID", CoreController.sharedInstance().getPackageSessionID());
                 break;
-
         }
         toBroadcastIntent.putExtra("packageName",packageName);
         toBroadcastIntent.putExtra("timestamp",System.currentTimeMillis());

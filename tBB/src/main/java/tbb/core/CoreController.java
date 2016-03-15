@@ -11,7 +11,14 @@ import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import tbb.core.ioManager.Monitor;
 import tbb.core.logger.AssistivePlay;
@@ -23,6 +30,7 @@ import tbb.database.TbbDatabaseHelper;
 import tbb.interfaces.AccessibilityEventReceiver;
 import tbb.interfaces.IOEventReceiver;
 import tbb.interfaces.NotificationReceiver;
+import tbb.touch.PackageSession;
 import tbb.touch.TouchRecognizer;
 
 public class CoreController {
@@ -32,6 +40,7 @@ public class CoreController {
 
     public static final String ACTION_INIT = "BB.ACTION.CORECONTROLLER.INIT";
     public static final String ACTION_STOP = "BB.ACTION.CORECONTROLLER.STOP";
+
 
     // singleton instance
     private static CoreController mSharedInstance = null;
@@ -66,7 +75,6 @@ public class CoreController {
 	public static final int SETUP_TOUCH = 3;
 	public static final int SET_TOUCH_RAW = 4;
 	public static final int FOWARD_TO_VIRTUAL = 5;
- 
 	// Mapped screen resolution
 	public double M_WIDTH;
 	public double M_HEIGHT;
@@ -76,6 +84,7 @@ public class CoreController {
 	public boolean landscape;
 
     private int mUserID;
+	private String user;
 
     protected CoreController() {}
 
@@ -108,13 +117,14 @@ public class CoreController {
 	}
 
     private void initializeReceivers(String username){
-
+		Log.d("debug","CC initializing receivers");
+		user = username;
         // Notification receivers
         // TODO are we using notifications?
-        mNotificationReceivers = new ArrayList<NotificationReceiver>();
+        mNotificationReceivers = new ArrayList<>();
 
         // Event Receivers
-        mAccessibilityEventReceivers = new ArrayList<AccessibilityEventReceiver>();
+        mAccessibilityEventReceivers = new ArrayList<>();
 		AssistivePlay aPlay = new AssistivePlay(mTBBService.getApplicationContext());
 		registerAccessibilityEventReceiver(aPlay);
         //registerAccessibilityEventReceiver(ioTreeLogger);
@@ -125,7 +135,7 @@ public class CoreController {
         }
 
         // IO receivers
-        mIOEventReceivers = new ArrayList<IOEventReceiver>();
+        mIOEventReceivers = new ArrayList<>();
 		IOTreeLogger ioTreeLogger = new IOTreeLogger("IO", "Tree", username, 250, 50,"Interaction",dbActive);
 		ioTreeLogger.start(mTBBService.getApplicationContext());
         registerIOEventReceiver(ioTreeLogger);
@@ -133,7 +143,7 @@ public class CoreController {
 
 
         // Logger receivers
-        mKeystrokeEventReceiver = new ArrayList<KeystrokeLogger>();
+        mKeystrokeEventReceiver = new ArrayList<>();
         KeystrokeLogger ks = new KeystrokeLogger("Keystrokes", 150,username,dbActive);
         ks.start(mTBBService.getApplicationContext());
         registerKeystrokeEventReceiver(ks);
@@ -143,6 +153,63 @@ public class CoreController {
         mMessageLogger = MessageLogger.sharedInstance(username,dbActive);
         mMessageLogger.start(mTBBService.getApplicationContext());
     }
+
+	public void unregisterReceivers(){
+
+		// Notification receivers
+		//mNotificationReceivers = null;
+
+		// Event Receivers
+		for(AccessibilityEventReceiver receiver : mAccessibilityEventReceivers){
+			unregisterEvent(receiver);
+
+		}
+		//mAccessibilityEventReceivers = null;
+
+
+		// IO receivers
+		for(IOEventReceiver receiver : mIOEventReceivers){
+
+			unregisterIOReceiver(receiver);
+		}
+		//mIOEventReceivers = null;
+
+		// Logger receivers
+		for(KeystrokeLogger receiver : mKeystrokeEventReceiver){
+			receiver.stop();
+			unregisterKeystrokeEventReceiver(receiver);
+		}
+		// mKeystrokeEventReceiver = null;
+
+		mMessageLogger.stop();
+
+	}
+
+	public void resumeReceivers(){
+
+		// Event Receivers
+		AssistivePlay aPlay = new AssistivePlay(mTBBService.getApplicationContext());
+		registerAccessibilityEventReceiver(aPlay);
+
+		boolean dbActive = false;
+		if(tbbDBHelper != null){
+			dbActive = true;
+		}
+
+		// IO receivers
+		IOTreeLogger ioTreeLogger = new IOTreeLogger("IO", "Tree", user, 250, 50,"Interaction",dbActive);
+		ioTreeLogger.start(mTBBService.getApplicationContext());
+		registerIOEventReceiver(ioTreeLogger);
+
+
+
+		// Logger receivers
+		KeystrokeLogger ks = new KeystrokeLogger("Keystrokes", 150,user,dbActive);
+		ks.start(mTBBService.getApplicationContext());
+		registerKeystrokeEventReceiver(ks);
+
+		mMessageLogger.start(mTBBService.getApplicationContext());
+	}
 
 	public static MessageLogger getmMessageLogger(){
 		return mMessageLogger;
@@ -271,10 +338,12 @@ public class CoreController {
 	 *            value
 	 */
 	public void injectToVirtual(int t, int c, int v) {
+		Log.d("debug","INJECT TO VIRTUAL: T:"+t+" C:"+c+" V:"+v);
         mMonitor.injectToVirtual(t, c, v);
 	}
 
 	public void injectToTouch(int t, int c, int v) {
+		Log.d("debug","INJECT TO touch: T:"+t+" C:"+c+" V:"+v);
         mMonitor.injectToTouch(t, c, v);
 	}
 
@@ -289,7 +358,13 @@ public class CoreController {
 	public void inject(int index, int type, int code, int value) {
 		mMonitor.inject(index, type, code, value);
 	}
+	public void showToast(final String s) {
 
+				Toast.makeText(mTBBService.getApplicationContext(), s,
+						Toast.LENGTH_LONG).show();
+
+
+	}
 	public int monitorTouch(boolean state) {
         return mMonitor.monitorTouch(state);
 	}
@@ -413,26 +488,101 @@ public class CoreController {
         //CoreController.registerLogger(IOTreeLogger.sharedInstance(mTBBService.getApplicationContext()));
 	}
 
+private ArrayList<Float> getScreenSpecs(){
+	ArrayList<Float> specs = new ArrayList<>();
 
+	WindowManager window = (WindowManager) mTBBService.getSystemService(Context.WINDOW_SERVICE);
+	DisplayMetrics metrics = new DisplayMetrics();
+	window.getDefaultDisplay().getMetrics(metrics);
+
+	Log.d("debug", "screen_density:" + metrics.density + ", screen_density_dpi:" + metrics.densityDpi +
+			", screen_width:" + metrics.widthPixels + ", screen_height:" + metrics.heightPixels + ", orientation:"
+			+ mTBBService.getResources().getConfiguration().orientation);
+	specs.add(metrics.density);
+	specs.add((float) metrics.densityDpi);
+	specs.add((float)metrics.widthPixels);
+	specs.add((float) metrics.heightPixels);
+
+	Process sh = null;
+	try {
+
+		sh = Runtime.getRuntime().exec("su", null, null);
+		DataOutputStream os = new DataOutputStream(sh.getOutputStream());
+		DataInputStream is = new DataInputStream(sh.getInputStream());
+
+		BufferedReader reader = new BufferedReader (new InputStreamReader(is));
+
+		//getevent retrieves information about the touch driver
+		os.writeBytes("getevent -lp "+mMonitor.getDevicePath());
+		os.flush();
+		os.close();
+
+		String line;
+		String xString="";
+		String yString="";
+
+		while ((line = reader.readLine()) != null) {
+
+
+			if(line.contains("ABS_MT_POSITION_X")){
+				xString = line;
+			} else if(line.contains("ABS_MT_POSITION_Y")){
+				yString = line;
+			}
+		}
+
+		reader.close();
+		is.close();
+
+		specs.add(getDriverSizeFromString(xString));
+		specs.add(getDriverSizeFromString(yString));
+
+	} catch (IOException e) {
+		e.printStackTrace();
+	}
+
+	if(specs.size()==6){
+		return specs;
+	}
+	return null;
+}
+
+	private Float getDriverSizeFromString(String src){
+		ArrayList<String> values = new ArrayList<>();
+		Pattern p = Pattern.compile("\\d+");
+		Matcher m = p.matcher(src);
+		while (m.find()) {
+
+			values.add(m.group());
+		}
+
+		return Float.parseFloat(values.get(2));
+	}
 
 	private void sessionInit(){
 		//get screen density and dimensions
-		WindowManager window = (WindowManager) mTBBService.getSystemService(Context.WINDOW_SERVICE);
+		ArrayList<Float> specs = getScreenSpecs();
+		//setScreenSize(Math.round(specs.get(2)),Math.round(specs.get(3)));
+		setScreenSize(Math.round(specs.get(4)),Math.round(specs.get(5)));
 
+//log information about session
+		if(specs != null) {
+			if (mTBBService.checkStorageMethod() == 0) {
+				startDBSession(System.currentTimeMillis(), specs.get(0),specs.get(1),specs.get(2),
+						specs.get(3), mTBBService.getResources().getConfiguration().orientation,
+						specs.get(4),specs.get(5));
 
-		DisplayMetrics metrics = new DisplayMetrics();
-		window.getDefaultDisplay().getMetrics(metrics);
-		//log information about session
-        if(mTBBService.checkStorageMethod() == 0){
-            startDBSession(System.currentTimeMillis(),metrics.density,metrics.densityDpi,metrics.widthPixels,
-                    metrics.heightPixels,mTBBService.getResources().getConfiguration().orientation);
-        } else {
-            mMessageLogger.writeAsync("\"SESSION_INIT\",\"timestamp\":\"" + System.currentTimeMillis() + "\"," +
-                    "\"screen_density\":\"" + metrics.density + "\",\"screen_density_dpi\":\"" + metrics.densityDpi + "\"," +
-                    "\"screen_width\":\"" + metrics.widthPixels + "\",\"screen_height\":\"" + metrics.heightPixels + "\"," +
-                    "\"orientation\":\"" + mTBBService.getResources().getConfiguration().orientation + "\"");
-            mMessageLogger.onFlush();
-        }
+			} else {
+				mMessageLogger.writeAsync("\"SESSION_INIT\",\"timestamp\":\"" + System.currentTimeMillis() + "\"," +
+						"\"screen_density\":\"" + specs.get(0) + "\",\"screen_density_dpi\":\"" + specs.get(1) + "\"," +
+						"\"screen_width\":\"" + specs.get(2) + "\",\"screen_height\":\"" + specs.get(3) + "\"," +
+						"\"orientation\":\"" + mTBBService.getResources().getConfiguration().orientation + "\"," +
+						"\"driver_width\":\"" +  specs.get(4) + "\",\"driver_height\":\"" +  specs.get(5) + "\"");
+				mMessageLogger.onFlush();
+			}
+
+		}
+
 
 
 	}
@@ -473,7 +623,7 @@ public class CoreController {
 * */
 
 	public void setScreenSize(int width, int height) {
-
+Log.d("debug","touch driver size is w:"+width+" h:"+height);
 		mTBBService.storeScreenSize(width, height);
 	}
 
@@ -594,7 +744,7 @@ public class CoreController {
 
 	public int currentFileId() {
 		return PreferenceManager.getDefaultSharedPreferences(mTBBService).getInt(
-                "preFileSeq", 0);
+				"preFileSeq", 0);
 	}
 
 
@@ -603,8 +753,10 @@ public class CoreController {
 	}
 
     /*DB CALLS*/
-    public void startDBSession(long timestamp, float density, int densityDpi, int width, int height, int orientation){
-        int id = tbbDBHelper.startSession(mUserID,timestamp,density,densityDpi,width,height,orientation);
+    public void startDBSession(long timestamp, float density, float densityDpi, float width,
+							   float height, int orientation, float driverWidth, float driverHeight){
+        int id = tbbDBHelper.startSession(mUserID,timestamp,density,densityDpi,width,
+				height,orientation,driverWidth,driverHeight);
 //necessary to return?
     }
 
@@ -612,6 +764,9 @@ public class CoreController {
         tbbDBHelper.endSession(timestamp);
     }
 
+	public int getPackageSessionID(){
+		return tbbDBHelper.getPackageSessionID();
+	}
     public void startPackageSession(String packageName, long timestamp){
         //check if package exists
         //get session id
@@ -630,7 +785,20 @@ public class CoreController {
 
 
     public void logIO(int id,int device,int touchType,int multitouchID,int x,int y,int pressure,int devTime,long sysTime){
-        tbbDBHelper.logIO(id, device, touchType, multitouchID, x, y, pressure, devTime,sysTime);
+        tbbDBHelper.logIO(id, device, touchType, multitouchID, x, y, pressure, devTime, sysTime);
     }
+	public PackageSession getPackageSession(int packageSessionID){
+		return tbbDBHelper.loadPackageSession(packageSessionID);
+	}
+	public void pauseDB(){
+		tbbDBHelper.closeDB();
+	}
+	public void resumeDB(){
+		tbbDBHelper.resumeDB();
+	}
+
+	public ArrayList<Integer> getScreenSpecs(int id){
+		return tbbDBHelper.getScreenSpecs(id);
+	}
 
 }

@@ -24,12 +24,14 @@
     <string-array name="tprMode">
     <item name="1">None</item>
     <item name="2">input mtx</item>
-    <item name="3">sec touchscreen</item>
+    <item name="3">tab2 touchscreen</item>
+    <item name="4">tab pro touchscreen</item>
 </string-array>
     <string-array name="tprValues">
         <item name="1">null</item>
         <item name="2">nexusS</item>
         <item name="3">tab2</item>
+        <item name="4">tabpro</item>
     </string-array>
 
 

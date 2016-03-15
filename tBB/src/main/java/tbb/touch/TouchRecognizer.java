@@ -48,6 +48,8 @@ public abstract class TouchRecognizer {
 		protected int slideXorigin;
 		protected int slideYorigin;
 	//	protected int lastEventCode = -1;
+		protected int x;
+		protected int y;
 		protected int pressure;
 		protected int touchMajor;
 		protected int touchMinor;

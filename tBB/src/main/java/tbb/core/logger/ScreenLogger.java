@@ -24,16 +24,20 @@ public class ScreenLogger extends TimerTask {
         String filename = mScreenshotFolder + "/" + System.currentTimeMillis() + ".raw";
 
         Log.d("debug", "Screenshot filename:" + filename);
+
+        Process sh = null;
         try {
-            Process sh = Runtime.getRuntime().exec("su", null, null);
+            sh = Runtime.getRuntime().exec("su", null, null);
             OutputStream os = sh.getOutputStream();
-            os.write(("/system/bin/screencap " + filename).getBytes("ASCII"));
+            os.write(("/system/bin/screencap --size  " + filename).getBytes("ASCII"));
             os.flush();
             os.close();
-            sh.waitFor();
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
+
+            //sh.waitFor();
+
 
 
     }

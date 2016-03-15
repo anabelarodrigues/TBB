@@ -30,7 +30,7 @@ public class IOTreeLogger extends Logger implements IOEventReceiver {
     private final Object mIntLock = new Object(); // used to synchronize access to mIOData
     private final int TIME_DELAY = 200;
     private int lastRead = -1;
-    private int id = 0;
+    private int id = 0; //TODO what is this for ..?
     private boolean isAdding = false;
     private String mTreeData;
     private ArrayList<String> mIOData;
@@ -62,6 +62,7 @@ public class IOTreeLogger extends Logger implements IOEventReceiver {
 
         mTPR = CoreController.sharedInstance().getActiveTPR();
         mTouchDevice = CoreController.sharedInstance().monitorTouch(false);
+        Log.d("debug","mTouchDevice:"+mTouchDevice);
 
     }
 
@@ -305,7 +306,7 @@ public class IOTreeLogger extends Logger implements IOEventReceiver {
         DataWriter w = new DataWriter(mFolderName, mIntFilename, true,CoreController.sharedInstance().getTBBService().getApplicationContext());
         w.execute(mIntData.toArray(new String[mIntData.size()]));
         mIntData = new ArrayList<String>();
-        // }
+
     }
     /*
         @Override
@@ -330,10 +331,15 @@ public class IOTreeLogger extends Logger implements IOEventReceiver {
 
                 TouchEvent te = mTPR.getlastTouch();
 
+
                 if(logDB){
                     //TODO db things
-                    CoreController.sharedInstance().logIO(id,device,touchType,te.getIdentifier(),
-                            te.getX(),te.getY(),te.getPressure(),te.getTime(),sysTime);
+                    Log.d("TbbDatabaseHelper","IOTreeLogger:id:"+id+" device:"+device+" touchType:"+
+                    touchType+"teID:"+te.getIdentifier()+" x:"+te.getX()+" y:"+te.getY()+" pressure:"+
+                    te.getPressure()+" time:"+te.getTime()+" sysTime:"+sysTime);
+
+                    CoreController.sharedInstance().logIO(id, device, touchType, te.getIdentifier(),
+                            te.getX(), te.getY(), te.getPressure(), te.getTime(), sysTime);
                 }else {
                     //  mTimestamp = timestamp;
                     String json = "{\"treeID\":" + id +
@@ -354,22 +360,28 @@ public class IOTreeLogger extends Logger implements IOEventReceiver {
                     case TouchRecognizer.DOWN:
                         //take screenshot, start timer
                         Log.d("debug","TOUCH DOWN");
-                        if(timer==null) {
+                      /*  if(timer==null) {
                             timerTask = new ScreenLogger(mScreenshotFolder);
                             timer = new Timer();
 
                             timer.schedule(timerTask, 0, 1000);
-                        }
+                        }*/
                         break;
 
                     case TouchRecognizer.UP:
                         //stop timer.
                         Log.d("debug","TOUCH UP");
-                        if(timer != null) {
+                      /*  if(timer != null) {
                             timer.cancel();
                             timer.purge();
                             timer = null;
-                        }
+                        }*/
+                       /* TouchPoint touchpoint = new TouchPoint(touchType,te.getX(),te.getY(), ""+timestamp,te.getIdentifier());
+                        int i = 0;
+                        while(i<20){
+                            touchpoint.reproduce(0,0);
+                            i++;
+                        }*/
                         break;
                 }
             }

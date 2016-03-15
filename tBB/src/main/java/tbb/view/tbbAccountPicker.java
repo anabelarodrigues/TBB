@@ -12,7 +12,7 @@ import tbb.core.CoreController;
 /**
  * Created by Anabela on 06/01/2016.
  */
-public class tbbAccountPicker extends Activity {
+public class TBBAccountPicker extends Activity {
 
     private static final int PICK_ACCOUNT_REQUEST = 1;
 

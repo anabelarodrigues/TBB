@@ -6,7 +6,7 @@ import android.os.Bundle;
 /**
  * Created by Anabela on 30/12/2015.
  */
-public class tbbView extends Activity {
+public class TBBView extends Activity {
 
     //TODO main app interface; necessary for user usability
     //turns on/off the monitor

@@ -122,10 +122,11 @@ public class Events {
 			// changing 660 to 666
 			if (res != 0) {
 				// possible only if we have root
-
+				Log.d("debug","running command: chmod 666 " + m_szPath);
 				if (forceOpen && Shell.isSuAvailable()) {
 
 					// set new permissions
+
 					Shell.runCommand("chmod 666 " + m_szPath);
 
 					// reopen
@@ -141,9 +142,9 @@ public class Events {
 
 		public int  createVirtualDrive(String touch, int protocol, int absX, int absY) {
 			if (Shell.isSuAvailable()) {
-				Shell.runCommand("chmod 666 " + "/dev/uinput");
+				Shell.runCommand("chmod 666 "+"/dev/uinput");
 			}
-
+			//ScanFiles();
 			return createVirtualDevice(touch, protocol, absX, absY);
 
 		}
