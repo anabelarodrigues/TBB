@@ -80,9 +80,9 @@ public class TBBInjection extends Activity {
 
                     }
                 }
-                CoreController.sharedInstance().commandIO(
+              /*  CoreController.sharedInstance().commandIO(
                         CoreController.SET_BLOCK, test.mTouchDevice,
-                        test.adapt&&test.saved);
+                        test.adapt&&test.saved);*/
             }
         });
     }

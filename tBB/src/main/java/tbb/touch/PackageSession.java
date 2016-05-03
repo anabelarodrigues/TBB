@@ -35,7 +35,7 @@ public class PackageSession {
     public void reproduceOnPoint(int orientation, int x, int y){
         if(touches.size()>0){
             for (TouchSequence value : touches.values()) {
-                value.reproduceSequence(orientation,x,y);
+               // value.reproduceSequence(orientation,x,y);
 
             }
         }

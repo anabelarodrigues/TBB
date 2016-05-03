@@ -47,6 +47,16 @@
 
         android:layout_weight="0.65"
         android:layout_toRightOf="@id/button2" />
+
+    <Button
+        style="?android:attr/buttonBarPositiveButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Analyse DB"
+        android:id="@+id/analyse"
+
+        android:layout_weight="0.65"
+        android:layout_toRightOf="@id/injection" />
 </RelativeLayout>
 
 

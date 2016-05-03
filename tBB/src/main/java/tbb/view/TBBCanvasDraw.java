@@ -69,15 +69,17 @@ Log.d("debug","PREVIOUS; current index is "+currentIndex);
             @Override
             public void onClick(View v) {
 //clear canvas, if next, draw
-                Log.d("debug","NEXT; current index is "+currentIndex);
+              /*  Log.d("debug","NEXT; current index is "+currentIndex);
                 if(currentIndex < sequenceKeys.size()){
-                //    canvas.clearCanvas();
                     canvas.setmPath(session.getSequenceByIndex(sequenceKeys.get(currentIndex),
                             canvas.width,canvas.height,
                             CoreController.sharedInstance().getTBBService().getResources().getConfiguration().orientation));
                     currentIndex++;
 
-                }
+                }*/
+
+                int[] coordinates = new int[2];
+                canvas.getLocationOnScreen(coordinates);//gets top corner in [1] !
             }
         });
 
@@ -109,7 +111,7 @@ Log.d("debug","PREVIOUS; current index is "+currentIndex);
                             public void onClick(DialogInterface dialog, int id) {
 
                                 // get user input and set it to result
-String folder = TBBService.STORAGE_FOLDER + "/bitmaps/";
+                                String folder = TBBService.STORAGE_FOLDER + "/bitmaps/";
                                 String filename = packageSessionID +
                                         "-"+input.getText().toString() + ".png";
 

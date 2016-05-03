@@ -38,11 +38,13 @@
     <string-array name="storageMode">
         <item name="1">Database</item>
         <item name="2">JSON</item>
+        <item name="3">Load Existing Database</item>
 
     </string-array>
     <string-array name="storageValues">
         <item name="1">db</item>
         <item name="2">json</item>
+        <item name="3">loaddb</item>
     </string-array>
 
     <string-array name="encryptionLevelNames">

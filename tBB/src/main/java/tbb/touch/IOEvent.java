@@ -3,11 +3,11 @@ package tbb.touch;
 public class IOEvent {
 
 	int type;
-	int timestamp;
+	long timestamp;
 	int code;
 	int value;
 	
-	public IOEvent(int type, int code, int value, int timestamp){
+	public IOEvent(int code,int type, int value, long timestamp){
 		this.type=type;
 		this.code=code;
 		this.value=value;
@@ -18,7 +18,7 @@ public class IOEvent {
 		return type;
 	}
 
-	public int getTimestamp() {
+	public long getTimestamp() {
 		return timestamp;
 	}
 

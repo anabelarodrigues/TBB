@@ -368,6 +368,9 @@ public class CoreController {
 	public int monitorTouch(boolean state) {
         return mMonitor.monitorTouch(state);
 	}
+	public int getTouchDevice(){
+		return mMonitor.getTouchIndex();
+	}
 
 	/**
 	 * Get list of internal devices (touchscree, keypad, etc)
@@ -567,7 +570,7 @@ private ArrayList<Float> getScreenSpecs(){
 
 //log information about session
 		if(specs != null) {
-			if (mTBBService.checkStorageMethod() == 0) {
+			if (mTBBService.checkStorageMethod() == 0 || mTBBService.checkStorageMethod() == 2) {
 				startDBSession(System.currentTimeMillis(), specs.get(0),specs.get(1),specs.get(2),
 						specs.get(3), mTBBService.getResources().getConfiguration().orientation,
 						specs.get(4),specs.get(5));
@@ -697,12 +700,16 @@ Log.d("debug","touch driver size is w:"+width+" h:"+height);
 			//db
 			Log.d("debug","Initializing database...");
 			Toast.makeText(mTBBService.getApplicationContext(),"Initializing database ...",Toast.LENGTH_LONG);
-			tbbDBHelper = new TbbDatabaseHelper(mTBBService.getApplicationContext());
+			tbbDBHelper = new TbbDatabaseHelper(mTBBService.getApplicationContext(),false);
             //user!
             return tbbDBHelper.authenticateOrRegisterUser(username, email);
 		} else if (storage == 1){
 			//json
 			tbbDBHelper = null;
+		} else if(storage == 2){
+			Log.d("debug","Loading database...");
+			tbbDBHelper = new TbbDatabaseHelper(mTBBService.getApplicationContext(),true);
+			return tbbDBHelper.authenticateOrRegisterUser(username, email);
 		}
         return -1;
 	}
@@ -779,6 +786,9 @@ Log.d("debug","touch driver size is w:"+width+" h:"+height);
         tbbDBHelper.endPackageSession(timestamp);
     }
 
+	public String getPackageName(int packageID){
+		return tbbDBHelper.getPackageName(packageID);
+	}
     public void changeOrientation(long timestamp){
         tbbDBHelper.changeOrientation(timestamp, mTBBService.getResources().getConfiguration().orientation);
     }
@@ -801,4 +811,19 @@ Log.d("debug","touch driver size is w:"+width+" h:"+height);
 		return tbbDBHelper.getScreenSpecs(id);
 	}
 
+	public ArrayList<Integer> getAllPackages(){
+		return tbbDBHelper.getAllPackages();
+	}
+
+	public ArrayList<Integer> getAllPackageSessions(int packageID){
+		return tbbDBHelper.getAllPackageSessions(packageID);
+	}
+
+	public long getSequenceEnd(int sequenceID){
+		return tbbDBHelper.getSequenceEnd(sequenceID);
+	}
+
+	public long getPreviousTimestamp(int packageSessionID, int sequenceID){
+		return tbbDBHelper.getPreviousTimeStamp(packageSessionID, sequenceID);
+	}
 }

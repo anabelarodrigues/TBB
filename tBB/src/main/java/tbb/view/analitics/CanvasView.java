@@ -26,18 +26,21 @@ public class CanvasView extends View {
     private Bitmap mBitmap;
     private Canvas mCanvas;
     private ArrayList<Path> pathList;
-    Context context;
-    private Paint mPaint;
-    private float mX, mY;
-    private static final float TOLERANCE = 5;
+    private Paint mPaint,mDrawPaint;
+
+    //draw
+
 
     public CanvasView(Context context, AttributeSet attrs) {
         super(context, attrs);
     }
-
+    public CanvasView(Context context) {
+        super(context);
+    }
 
     public void setmPath(ArrayList<Path> paths) {
-        Log.d("debug","SETTING PATH; paths size is "+paths.size());
+        Log.d("debug","SETTING PATH; paths size is: "+paths.size());
+
         pathList=paths;
 
         invalidate();
@@ -47,6 +50,8 @@ public class CanvasView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
+     //   canvas.drawBitmap(mBitmap, 0, 0, mBitmapPaint);
+        canvas.drawColor(Color.WHITE);
         if(pathList!= null && pathList.size()>0) {
             for (Path path : pathList) {
                 //   path.close();
@@ -54,10 +59,16 @@ public class CanvasView extends View {
                 Log.d("debug", "Iterating .. BMheight:" + mBitmap.getScaledHeight(mCanvas) +
                         " BMwidth:" + mBitmap.getScaledWidth(mCanvas) + " BMdensity:" + mBitmap.getDensity());
                 // mCanvas.drawPaint(mPaint);
+              //  canvas.drawColor(Color.WHITE);
+               // canvas.drawBitmap( mBitmap, 0, 0, mBitmapPaint);
                 canvas.drawPath(path, mPaint);
+
 
             }
         }
+
+        //canvas.drawPath(virtualPaths,mDrawPaint);
+        //canvas.drawBitmap(mBitmap, 0, 0, mBitmapPaint);
     }
 
 
@@ -74,6 +85,17 @@ public class CanvasView extends View {
         mPaint.setDither(true);
         mPaint.setStrokeCap(Paint.Cap.ROUND);
 
+        mDrawPaint = new Paint();
+        mDrawPaint.setAntiAlias(true);
+        mDrawPaint.setColor(Color.GREEN);
+        mDrawPaint.setStyle(Paint.Style.STROKE);
+        mDrawPaint.setStrokeJoin(Paint.Join.ROUND);
+        mDrawPaint.setStrokeWidth(4);
+        mDrawPaint.setDither(true);
+        mDrawPaint.setStrokeCap(Paint.Cap.ROUND);
+
+       // mBitmapPaint = new Paint(Paint.DITHER_FLAG);
+      //  mBitmapPaint.setColor(Color.WHITE);
 
 
     }
@@ -84,15 +106,18 @@ public class CanvasView extends View {
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         // your Canvas will draw onto the defined Bitmap
-        Log.d("debug","CanvasView size has changed! w:"+w+" h:"+h);
+        Log.d("debug", "CanvasView size has changed! w:"+w+" h:"+h);
         mBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
        // Bitmap.createScaledBitmap(mBitmap, w, h, true);
         mCanvas = new Canvas(mBitmap);
         this.height = h;
         this.width = w;
-        Log.d("debug","CanvasView size is w:"+mCanvas.getClipBounds().right+" h:"+mCanvas.getClipBounds().bottom);
+        Log.d("debug","CanvasView size is w:"+mCanvas.getClipBounds().right+" h:"+
+                mCanvas.getClipBounds().bottom);
         //mCanvas.scale(xScale,yScale);
     }
+
+
 
     public void clearCanvas(){
         for (Path path : pathList) {
@@ -103,23 +128,27 @@ public class CanvasView extends View {
     }
 
     //this works for some reason yay
-    public Bitmap getBitmapFromView() {
+    public void setCanvasOnBitmap() {
         //Define a bitmap with the same size as the view
-        Bitmap returnedBitmap = Bitmap.createBitmap(CanvasView.this.getWidth(), CanvasView.this.getHeight(),Bitmap.Config.ARGB_8888);
+       /* Bitmap returnedBitmap = Bitmap.createBitmap(CanvasView.this.getWidth(),
+                CanvasView.this.getHeight(),Bitmap.Config.ARGB_8888);
         //Bind a canvas to it
-        Canvas canvas = new Canvas(returnedBitmap);
+        Canvas canvas = new Canvas(returnedBitmap);*/
         //Get the view's background
+
         Drawable bgDrawable =CanvasView.this.getBackground();
         if (bgDrawable!=null)
             //has background drawable, then draw it on the canvas
-            bgDrawable.draw(canvas);
-        else
+            bgDrawable.draw(mCanvas);
+        //else
             //does not have background drawable, then draw white background on the canvas
-            canvas.drawColor(Color.WHITE);
+ //           canvas.drawColor(Color.GREEN);
         // draw the view on the canvas
-        CanvasView.this.draw(canvas);
+        CanvasView.this.draw(mCanvas);
+
+
         //return the bitmap
-        return returnedBitmap;
+       // return returnedBitmap;
     }
 
     public void saveToFile(File file){
@@ -128,7 +157,11 @@ public class CanvasView extends View {
 
         try {
             out = new FileOutputStream(file);
-            getBitmapFromView().compress(Bitmap.CompressFormat.PNG, 90, out);
+            setCanvasOnBitmap();
+            Bitmap toSave = Bitmap.createScaledBitmap(mBitmap, mBitmap.getWidth()/2,
+                    mBitmap.getHeight()/2, false);
+            toSave.compress(Bitmap.CompressFormat.PNG, 70, out);
+
             out.flush();
             out.close();
         } catch (FileNotFoundException e) {
@@ -137,6 +170,8 @@ public class CanvasView extends View {
             e.printStackTrace();
         }
     }
+
+
 
 
 

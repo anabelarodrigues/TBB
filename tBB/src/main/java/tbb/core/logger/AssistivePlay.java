@@ -41,7 +41,9 @@ public class AssistivePlay implements AccessibilityEventReceiver {
         printEventType(event);
 
         if((event.getEventType()== AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
-                && !packageName.equals("blackbox.tinyblackbox")){
+                && !packageName.equals("blackbox.tinyblackbox")
+                && !packageName.startsWith("com.google.android.inputmethod.") //keyboard
+                && !packageName.equals("android")){
             identifyEvent(event);
         }
 
@@ -181,7 +183,7 @@ public class AssistivePlay implements AccessibilityEventReceiver {
        if(packageName.startsWith("com.android.")
                || packageName.startsWith("com.google.")
                || packageName.startsWith("com.sec.android.")
-               || packageName.equals("android")
+               //|| packageName.equals("android")
                || packageName.equals("system")){
            return true;
        }

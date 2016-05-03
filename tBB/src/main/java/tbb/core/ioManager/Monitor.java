@@ -50,6 +50,9 @@ public class Monitor {
 		}
 		return state;
 	}
+	public int getTouchIndex(){
+		return touchIndex;
+	}
 
 	/**
 	 * Log keystroke if logger is enable TODO
@@ -216,8 +219,10 @@ public class Monitor {
 		Log.d("debug","TOUCH INDEX");
 		Log.d("debug","index:"+touchIndex+" device_name:"+dev.get(touchIndex).getName());
 
+
+
 		int success = dev.get(0).createVirtualDrive(
-				dev.get(touchIndex).getName(), protocol,
+				"sec_touchscreen", protocol,
 				CoreController.sharedInstance().getTBBService().getScreenSize()[0],
 				CoreController.sharedInstance().getTBBService().getScreenSize()[1]);
 

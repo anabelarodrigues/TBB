@@ -70,10 +70,13 @@
             android:launchMode="singleTop" ></activity>
         <activity android:name="tbb.view.TBBInjection"
             android:launchMode="singleTop" ></activity>
-
+        <activity android:name="tbb.view.analitics.DataAnalysis"
+            android:launchMode="singleTop"
+            android:theme="@android:style/Theme.NoTitleBar"></activity>
         <activity
             android:name="tbb.view.TBBAccountPicker"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"></activity>
+            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"
+            ></activity>
 
 
         <receiver
@@ -96,6 +99,11 @@
                 <action android:name="BB.ACTION.CONFIGURATION_CHANGED" />
             </intent-filter>
         </receiver>
+        <!-- ATTENTION: This was auto-generated to add Google Play services to your project for
+             App Indexing.  See https://g.co/AppIndexing/AndroidStudio for more information. -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
     </application>
 
 </manifest>

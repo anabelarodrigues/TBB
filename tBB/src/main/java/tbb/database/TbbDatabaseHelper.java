@@ -3,10 +3,18 @@ package tbb.database;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 
 import tbb.core.CoreController;
@@ -22,7 +30,11 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "TbbDatabaseHelper";
 
+    private static String DB_PATH = "/sdcard/TBB/database/";
+    private static String DATABASE_PATH = "/data/data/blackbox.tinyblackbox/databases/";
+
     private static final String DATABASE_NAME = "tbbdb";
+    private Context context;
 
     private static final String TEXT_TYPE = " TEXT";
     private static final String INT_TYPE = " INTEGER";
@@ -165,14 +177,37 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
     private int packageSessionID;
     private int touchSequenceID;
     private int sequence;
+    private boolean load = false;
 
 
-    public TbbDatabaseHelper(Context context) {
-
+    //mode is true if we want to load previous
+    public TbbDatabaseHelper(Context context, boolean mode) {
         super(context, DATABASE_NAME, null, 1);
-        tbbDB = getWritableDatabase();
-        if (checkIfTouchTypeIsEmpty()) {
-            Log.d(TAG, "Database creation complete!");
+
+        this.context = context;
+        load = mode;
+
+        if(load) {
+
+            boolean dbExist = checkDataBase();
+            Log.d(TAG,"dbExist is "+dbExist);
+
+            if(!dbExist) {
+                //By calling this method and empty database will be created into the default system path
+                //of your application so we are gonna be able to overwrite that database with our database.
+                getReadableDatabase();
+
+
+                Log.d(TAG, "Copying database at " + DB_PATH + DATABASE_NAME);
+                copyDataBase();
+
+            }
+            tbbDB = getWritableDatabase();
+        } else {
+            tbbDB = getWritableDatabase();
+            if (checkIfTouchTypeIsEmpty()) {
+                Log.d(TAG, "Database creation complete!");
+            }
         }
 
     }
@@ -180,32 +215,34 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        Log.d(TAG, "Creating database.");
+        if(!load){
 
-        Log.d(TAG, "Executing " + SQL_CREATE_USER);
-        db.execSQL(SQL_CREATE_USER);
+            Log.d(TAG, "Creating database.");
 
-        Log.d(TAG, "Executing " + SQL_CREATE_PACKAGE);
-        db.execSQL(SQL_CREATE_PACKAGE);
+            Log.d(TAG, "Executing " + SQL_CREATE_USER);
+            db.execSQL(SQL_CREATE_USER);
 
-        Log.d(TAG, "Executing " + SQL_CREATE_SESSION);
-        db.execSQL(SQL_CREATE_SESSION);
+            Log.d(TAG, "Executing " + SQL_CREATE_PACKAGE);
+            db.execSQL(SQL_CREATE_PACKAGE);
 
-        Log.d(TAG, "Executing " + SQL_CREATE_PACKAGE_SESSION);
-        db.execSQL(SQL_CREATE_PACKAGE_SESSION);
+            Log.d(TAG, "Executing " + SQL_CREATE_SESSION);
+            db.execSQL(SQL_CREATE_SESSION);
 
-        Log.d(TAG, "Executing " + SQL_CREATE_TOUCHTYPE);
-        db.execSQL(SQL_CREATE_TOUCHTYPE);
+            Log.d(TAG, "Executing " + SQL_CREATE_PACKAGE_SESSION);
+            db.execSQL(SQL_CREATE_PACKAGE_SESSION);
 
-        Log.d(TAG, "Executing " + SQL_CREATE_TOUCH_SEQUENCE);
-        db.execSQL(SQL_CREATE_TOUCH_SEQUENCE);
+            Log.d(TAG, "Executing " + SQL_CREATE_TOUCHTYPE);
+            db.execSQL(SQL_CREATE_TOUCHTYPE);
 
-        Log.d(TAG, "Executing " + SQL_CREATE_TOUCHPOINT);
-        db.execSQL(SQL_CREATE_TOUCHPOINT);
+            Log.d(TAG, "Executing " + SQL_CREATE_TOUCH_SEQUENCE);
+            db.execSQL(SQL_CREATE_TOUCH_SEQUENCE);
 
-        Log.d(TAG, "Executing " + SQL_CREATE_SCREEN_SPECS);
-        db.execSQL(SQL_CREATE_SCREEN_SPECS);
+            Log.d(TAG, "Executing " + SQL_CREATE_TOUCHPOINT);
+            db.execSQL(SQL_CREATE_TOUCHPOINT);
 
+            Log.d(TAG, "Executing " + SQL_CREATE_SCREEN_SPECS);
+            db.execSQL(SQL_CREATE_SCREEN_SPECS);
+        }
 
     }
 
@@ -266,7 +303,7 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
     }
 
     public int authenticateOrRegisterUser(String name, String email){
-        Log.d(TAG,"Checking if user "+name+" is in tbbDB ...");
+        Log.d(TAG, "Checking if user " + name + " is in tbbDB ...");
 
         Cursor cursor = tbbDB.query(TbbContract.User.TABLE_NAME,
                 new String[] { TbbContract.User._ID },
@@ -289,15 +326,15 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
 
     public int startSession(int userID, long timestamp, float density, float densityDpi, float width,
                             float height, int orientation, float driverWidth, float driverHeight) {
-        Log.d(TAG,"Registering new Session at "+timestamp+"...");
+        Log.d(TAG, "Registering new Session at " + timestamp + "...");
         //register active session id
         ContentValues contentValues = new ContentValues();
-        contentValues.put(TbbContract.Session.COLUMN_NAME_USER_ID,userID);
-        contentValues.put(TbbContract.Session.COLUMN_NAME_START_TIMESTAMP,timestamp);
+        contentValues.put(TbbContract.Session.COLUMN_NAME_USER_ID, userID);
+        contentValues.put(TbbContract.Session.COLUMN_NAME_START_TIMESTAMP, timestamp);
         sessionID = (int) tbbDB.insert(TbbContract.Session.TABLE_NAME, null, contentValues);
 
 
-        Log.d(TAG,"Session registration complete. ID is "+sessionID+".");
+        Log.d(TAG, "Session registration complete. ID is " + sessionID + ".");
         if(sessionID > 0){
             Log.d(TAG, "Registering device data. Values: density:" + density + " densityDpi:" +
                     densityDpi + " Screen width:" + width + " Screen height:" + height +
@@ -398,9 +435,9 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
 
             ContentValues contentValues = new ContentValues();
             contentValues.put(TbbContract.PackageSession.COLUMN_NAME_PACKAGE_ID, id);
-            contentValues.put(TbbContract.PackageSession.COLUMN_NAME_NAME,packageName);
+            contentValues.put(TbbContract.PackageSession.COLUMN_NAME_NAME, packageName);
             contentValues.put(TbbContract.PackageSession.COLUMN_NAME_SESSION_ID, sessionID);
-            contentValues.put(TbbContract.PackageSession.COLUMN_NAME_ORIENTATION_CHANGE_COUNT,0);
+            contentValues.put(TbbContract.PackageSession.COLUMN_NAME_ORIENTATION_CHANGE_COUNT, 0);
             contentValues.put(TbbContract.PackageSession.COLUMN_NAME_START_TIMESTAMP,timestamp);
 
             packageSessionID = (int) tbbDB.insert(TbbContract.PackageSession.TABLE_NAME,null,contentValues);
@@ -520,7 +557,7 @@ public class TbbDatabaseHelper extends SQLiteOpenHelper {
         ContentValues contentValues = new ContentValues();
         contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_DEVICE,device);
 contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_ORIENTATION,orientation);
-        contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_START_TIMESTAMP,System.currentTimeMillis());
+        contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_START_TIMESTAMP, System.currentTimeMillis());
         contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_PACKAGE_SESSION_ID,packageSessionID);
         contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_SEQUENCE_NUMBER,1);
         id = (int) tbbDB.insert(TbbContract.TouchSequence.TABLE_NAME, null, contentValues);
@@ -538,7 +575,7 @@ contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_ORIENTATION,orientation)
         sequence++;
         ContentValues contentValues = new ContentValues();
         contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_DEVICE,device);
-        contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_ORIENTATION,orientation);
+        contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_ORIENTATION, orientation);
 
         long time = System.currentTimeMillis(); //later receive this
         contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_START_TIMESTAMP, String.valueOf(time));
@@ -591,6 +628,7 @@ contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_ORIENTATION,orientation)
                         ",tp." + TbbContract.TouchPoint.COLUMN_NAME_MULTITOUCH_POINT +
                         ",tp." + TbbContract.TouchPoint.COLUMN_NAME_TOUCH_SEQUENCE_ID +
                         ",ts." + TbbContract.TouchSequence.COLUMN_NAME_ORIENTATION +
+                        ",tp." + TbbContract.TouchPoint.COLUMN_NAME_PRESSURE +
                         " FROM " + TbbContract.TouchPoint.TABLE_NAME + " tp," + TbbContract.TouchSequence.TABLE_NAME +
                         " ts WHERE tp." + TbbContract.TouchPoint.COLUMN_NAME_TOUCH_SEQUENCE_ID + "=ts." +
                         TbbContract.TouchSequence._ID + " AND ts." + TbbContract.TouchSequence.COLUMN_NAME_PACKAGE_SESSION_ID +
@@ -609,17 +647,21 @@ contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_ORIENTATION,orientation)
                     int multitouchPoint = cursor.getInt(4);
                     int sequence=cursor.getInt(5);
                     int orientation=cursor.getInt(6);
+                    int pressure = cursor.getInt(7);
 
                     Log.d(TAG,"TOUCHPOINT touchType:"+touchType+" x:"+x+" y:"+y+" timestamp"+ timestamp
                             +" multitouchpoint"+ multitouchPoint + " touchSequenceID:"+ sequence);
 
-                    TouchPoint temp = new TouchPoint(touchType,x,y,timestamp,multitouchPoint);
+                    TouchPoint temp = new TouchPoint(touchType,x,y,timestamp,multitouchPoint, pressure);
 
 
 
                     if(prevSequence<0 || prevSequence != sequence){
                         //orientation for this sequence!
-                        session.addSequence(sequence, new TouchSequence(getSequenceStartTime(sequence),orientation));
+                        TouchSequence ts = new TouchSequence(sequence,getSequenceStartTime(sequence),
+                                orientation);
+                        ts.setEndTime(sequence);
+                        session.addSequence(sequence, ts);
                     }
                     session.addTouchPointToSequence(sequence,temp);
 
@@ -638,6 +680,7 @@ contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_ORIENTATION,orientation)
             }
 
         }
+
         return session;
     }
 
@@ -652,6 +695,179 @@ contentValues.put(TbbContract.TouchSequence.COLUMN_NAME_ORIENTATION,orientation)
         }
         return null;
 
+    }
+
+    public ArrayList<Integer> getAllPackages(){
+        ArrayList<Integer> list = new ArrayList<>();
+        Cursor cursor = tbbDB.query(TbbContract.Package.TABLE_NAME,
+                new String[]{TbbContract.Package._ID},
+                null, null, null, null, null);
+
+        while(cursor.moveToNext()){
+            list.add(cursor.getInt(0));
+        }
+
+        return list;
+    }
+
+    public ArrayList<Integer> getAllPackageSessions(int packageID){
+        ArrayList<Integer> list = new ArrayList<>();
+        Cursor cursor = tbbDB.query(TbbContract.PackageSession.TABLE_NAME,
+                new String[] { TbbContract.PackageSession._ID },
+                TbbContract.PackageSession.COLUMN_NAME_PACKAGE_ID+"=?",
+                new String[] { ""+packageID }, null, null, null);
+
+        while(cursor.moveToNext()){
+            list.add(cursor.getInt(0));
+        }
+
+        return list;
+    }
+
+    public long getSequenceEnd(int sequenceID){
+        Log.d("debug","getting end timestamp of sequence with id "+sequenceID);
+        String result = null;
+
+    Cursor cursor = tbbDB.query(TbbContract.TouchSequence.TABLE_NAME,
+            new String[]{TbbContract.TouchSequence.COLUMN_NAME_END_TIMESTAMP},
+            TbbContract.TouchSequence._ID + "=?",
+            new String[]{"" + sequenceID}, null, null, null);
+        try {
+            if (cursor.moveToNext()) {
+                result = cursor.getString(0);
+            }
+        }finally {
+            cursor.close();
+        }
+        Log.d("debug","RESULT:"+result);
+        long value = -1;
+        if(result != null){
+            value = Long.valueOf(result);
+        }
+        return value;
+    }
+
+    public long getPreviousTimeStamp(int packageSessionID, int sequenceID){
+        long result = 0;
+
+        //get our sequence number within package session, get sequence number before
+        Cursor cursor = tbbDB.query(TbbContract.TouchSequence.TABLE_NAME,
+                new String[] { TbbContract.TouchSequence.COLUMN_NAME_SEQUENCE_NUMBER },
+                TbbContract.TouchSequence._ID+"=?",
+                new String[] { ""+sequenceID }, null, null, null);
+
+        if(cursor.moveToNext()) {
+            int seq = cursor.getInt(0);
+            Log.d("debug", "SEQUENCE NUMBER:" + seq);
+            if(seq>1){
+                seq--;
+                Cursor cursor2 = tbbDB.query(TbbContract.TouchSequence.TABLE_NAME,
+                        new String[] { TbbContract.TouchSequence.COLUMN_NAME_END_TIMESTAMP },
+                        TbbContract.TouchSequence.COLUMN_NAME_PACKAGE_SESSION_ID+"=? AND "
+                        +TbbContract.TouchSequence.COLUMN_NAME_SEQUENCE_NUMBER+"=?",
+                        new String[] { ""+packageSessionID,""+seq }, null, null, null);
+
+try {
+    if (cursor2.moveToNext() && cursor2.getString(0) != null) {
+
+        result = Long.parseLong(cursor2.getString(0));
+        Log.d("debug", "RESULT END TIMESTAMP:" + result);
+
+    }
+}finally { cursor2.close();}
+            }
+        }
+        return result;
+    }
+    /////////////////////////// LOAD DB METHODS /////////////////////////////////////
+
+
+    /**
+     * Check if the database already exist to avoid re-copying the file each time you open the application.
+     * @return true if it exists, false if it doesn't
+     */
+    private boolean checkDataBase(){
+
+        SQLiteDatabase checkDB = null;
+
+        try{
+            String myPath = DATABASE_PATH + DATABASE_NAME;
+            checkDB = SQLiteDatabase.openDatabase(myPath, null, SQLiteDatabase.OPEN_READONLY);
+
+        }catch(SQLiteException e){
+
+            //database does't exist yet.
+
+        }
+
+        if(checkDB != null){
+
+            checkDB.close();
+
+        }
+
+        return checkDB != null ? true : false;
+    }
+
+    /**
+     * Copies your database from your local assets-folder to the just created empty database in the
+     * system folder, from where it can be accessed and handled.
+     * This is done by transfering bytestream.
+     * */
+    private void copyDataBase() {
+
+        //Open your local db as the input stream
+        InputStream myInput = null;
+        try {
+            myInput = new FileInputStream(DB_PATH + DATABASE_NAME);
+
+        // Path to the just created empty db
+        String outFileName = DATABASE_PATH + DATABASE_NAME;
+
+
+        //Open the empty db as the output stream
+        OutputStream myOutput = new FileOutputStream(outFileName);
+
+        //transfer bytes from the inputfile to the outputfile
+        byte[] buffer = new byte[1024];
+        int length;
+        while ((length = myInput.read(buffer))>0){
+            myOutput.write(buffer, 0, length);
+        }
+
+        //Close the streams
+        myOutput.flush();
+        myOutput.close();
+        myInput.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    public void openDataBase() throws SQLException {
+
+        //Open the database
+        String myPath = DB_PATH + DATABASE_NAME;
+        tbbDB = SQLiteDatabase.openDatabase(myPath, null, SQLiteDatabase.OPEN_READONLY);
+
+    }
+
+
+    public String getPackageName(int packageID) {
+        String name = null;
+        Cursor cursor = tbbDB.query(TbbContract.Package.TABLE_NAME,
+                new String[] { TbbContract.Package.COLUMN_NAME_NAME },
+                TbbContract.Package._ID+"=?",
+                new String[] { ""+packageID }, null, null, null);
+
+        if(cursor.moveToNext()) {
+            name = cursor.getString(0);
+        }
+
+        return name;
     }
 }
 

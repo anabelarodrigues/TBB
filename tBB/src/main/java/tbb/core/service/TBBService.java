@@ -237,7 +237,7 @@ public class TBBService extends AccessibilityService {
 	 * Stops CoreController, which stops all TBB modules, and stops listening
 	 * for screen events.
 	 */
-	private void stopService() {
+	public void stopService() {
 		unregisterReceiver(mScreenReceiver);
 		CoreController.sharedInstance().stopService();
 		Log.v("IMPORTANT", "Monitor has been stopped");
@@ -328,7 +328,10 @@ public class TBBService extends AccessibilityService {
 		} else if (storage.equalsIgnoreCase("json")) {
 			Log.v(TAG, SUBTAG + "json");
 			returnstorage= 1;
-		} else {
+		} else if(storage.equalsIgnoreCase("loaddb")){
+			Log.v(TAG,SUBTAG + "load db");
+			returnstorage=2;
+		}else {
 			Log.v(TAG, SUBTAG + "null");
 			if (storage.equals("null")) {
 				Toast.makeText(this,

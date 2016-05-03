@@ -196,7 +196,7 @@ public class TouchTest implements IOEventReceiver {
 			Log.d(TBBService.TAG, " saving:" + saving + " adapt:" + adapt + " isInjecting:" + isInjecting
 					+ " saved:" + saved);
 			if (saving) {
-				toReproduce.add(new IOEvent(type, code, value, timestamp));
+				toReproduce.add(new IOEvent( code,type, value, timestamp));
 				return;
 			}
 
@@ -272,16 +272,14 @@ public class TouchTest implements IOEventReceiver {
 					io.getCode(), value);
 			index++;
 			if (index < toReproduce.size()) {
-				int delay = toReproduce.get(index).getTimestamp()
-						- io.getTimestamp();
+				int delay = (int)(toReproduce.get(index).getTimestamp()
+						- io.getTimestamp());
 				// Log.d(TBBService.TAG, "Delay: " + delay);
 				if (delay > 0) {
 					Timer t = new Timer();
-					if (delay < 50) {
-						t.schedule(new ReproduceTimer(index,x,y), 0);
-					} else {
-						t.schedule(new ReproduceTimer(index,x,y), delay);
-					}
+
+					t.schedule(new ReproduceTimer(index,x,y), delay);
+
 				} else {
 					reproduce(index, x,y);
 				}
